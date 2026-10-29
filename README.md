@@ -50,7 +50,8 @@ The wire protocol remains API v1 and existing snapshots retain schema 1.
 Arch/Omarchy packages are `minifuse-driver-dkms` and `mf-service`. Driver setup
 requires matching kernel headers and administrator access; normal control runs
 as the logged-in user. See [installation from a clean machine](docs/INSTALL.md),
-[package builds](packaging/arch/README.md) and the read-only `minifuse-doctor`.
+[package builds](packaging/arch/README.md), [the complete kit installer](distribution/INSTALLER.md)
+and the read-only `minifuse-doctor`.
 
 ## API and storage
 

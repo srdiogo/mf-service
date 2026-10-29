@@ -22,3 +22,12 @@ replay are outside this project's scope. Installing a unit never enables it.
 Run `make check-driver KDIR=/path/to/kernel/build` for driver changes. This
 builds without loading the module. Use `make arch-source` to export a clean,
 pinned package source kit; see [packaging](packaging/arch/README.md).
+
+The standalone installation entrypoint belongs under `distribution/`, separate
+from the service and plugin runtime. Root commands are fixed package/driver
+operations; all session/configuration work remains unprivileged. Test through
+fake hosts and temporary directories, never by enabling integration in CI.
+After committing, use `tools/prepare_installation_kit.py` with `--base-kit /path/to/verified-kit`
+and `--output /path/to/new-kit` to package the current installer alongside the pinned
+native artifacts. The base kit remains unchanged. The generated manifest and
+build record identify the installer revision separately from the runtime source.

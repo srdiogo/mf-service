@@ -11,6 +11,17 @@ MiniFuse 4 has bounded hardware validation. MF1/MF2 may appear in inventory but
 receive no inferred MF4 mixer, switch or meter layout. A new kernel, host or
 device combination still needs its own acceptance check.
 
+## Complete kit installer
+
+A prepared installation kit includes `install.sh`. Run it as the graphical user,
+without sudo, to verify the kit and review the full installation plan. Use
+`./install.sh --dry-run` for checks only. The entrypoint handles distribution
+prerequisites, matching headers, native packages, optional startup, the GUI,
+the pinned Omarchy panel and its floating-window policy. See
+[installer profiles and recovery](../distribution/INSTALLER.md).
+
+The following sections describe the same setup manually and from source.
+
 ## 1. Prepare the new machine
 
 Use a normal graphical login session. Install development dependencies through

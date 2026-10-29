@@ -11,6 +11,7 @@ check:
 	cargo clippy --workspace --all-targets --locked -- -D warnings
 check-tools:
 	$(PYTHON) -m unittest discover -s tools/tests -v
+	bash -n distribution/install.sh
 check-driver:
 	$(MAKE) -C kmod $(if $(KDIR),KDIR="$(KDIR)") W=1
 arch-source:
