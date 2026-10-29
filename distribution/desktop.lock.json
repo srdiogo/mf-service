@@ -3,14 +3,16 @@
   "api_major": 1,
   "gui": {
     "repository": "https://github.com/srdiogo/minifuse-control",
-    "commit": "c741b1885970f60ac9c11ad043cc377b9856635b",
-    "archive_sha256": "700d3867065f3c4851d7cae46e1406c07967817b8953d37903476d265ce71cd1"
+    "commit": "9162f292b6980a029fc93f038c3c9cbb40af4b1e",
+    "archive_sha256": "68cccb6f2f7b74c65469f711cec27fdf334fadeae948afd5a0bebe61a4777d55",
+    "recipe_commit": "f6342b5a0cabdf69c12577b4d050d8de17818086",
+    "recipe_sha256": "005d5bafb6cf6893f009667ce7d07da79e82e830129a06d96149645f833ea49f"
   },
   "plugin": {
     "id": "srdiogo.minifuse",
     "repository": "https://github.com/srdiogo/omarchy-minifuse",
-    "commit": "fbe846b2e01b0a202e0f9af3a1b633a8aa1bd4f1",
-    "archive_sha256": "abaf35e92e30408f8ea7d08d3672aed4e86377e2293e6320520c83ff50cff5d6"
+    "commit": "3cc6116680a50794c933f930b4e498623c01c0cc",
+    "archive_sha256": "e0c381ee6c9a6e95b89977caee0e409df1d5b310aa18d68bc6630d26a5f75c58"
   },
   "desktop_reference": {
     "omarchy": "4.0.4-1",

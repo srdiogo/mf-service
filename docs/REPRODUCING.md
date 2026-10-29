@@ -13,8 +13,8 @@ approved GUI and plugin source used for the desktop baseline. Their source
 archives are public:
 
 ```text
-https://codeload.github.com/srdiogo/minifuse-control/tar.gz/c741b1885970f60ac9c11ad043cc377b9856635b
-https://codeload.github.com/srdiogo/omarchy-minifuse/tar.gz/fbe846b2e01b0a202e0f9af3a1b633a8aa1bd4f1
+https://codeload.github.com/srdiogo/minifuse-control/tar.gz/9162f292b6980a029fc93f038c3c9cbb40af4b1e
+https://codeload.github.com/srdiogo/omarchy-minifuse/tar.gz/3cc6116680a50794c933f930b4e498623c01c0cc
 ```
 
 Verify each downloaded archive against the lock before using it. A checksum
@@ -33,9 +33,11 @@ Normal marketplace installation instead installs the currently published head.
 
 Build the GUI from its reviewed native package recipe or install its wheel into
 a dedicated user virtual environment as documented by that project. The pinned
-GUI runtime has no dependency on Omarchy. The historical recipe inside that GUI
-snapshot predates the visual refresh; use a reviewed updated recipe pinned to
-the GUI commit above rather than rebuilding its older runtime source silently.
+GUI runtime has no dependency on Omarchy. The lock separately pins the GUI runtime archive and its native package
+recipe revision/checksum. Use `packaging/arch/PKGBUILD` from the recorded
+`recipe_commit`; it selects the runtime above, including the correction for
+larger desktop fonts. Do not substitute the older recipe inside the runtime
+archive.
 The optional desktop agent is not needed for mixer operation or logo events.
 
 ## Record before testing
