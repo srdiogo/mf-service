@@ -1,0 +1,18 @@
+pkgbase = mf-service
+	pkgdesc = User-session MiniFuse control service with verified device operations
+	pkgver = 0.1.0.r10.gdcf2ee7
+	pkgrel = 1
+	url = https://github.com/srdiogo/mf-service
+	arch = x86_64
+	license = MIT
+	makedepends = rust>=1.85
+	makedepends = python
+	makedepends = systemd
+	depends = glibc
+	depends = libgcc
+	optdepends = mf-cli-platform: matching MiniFuse kernel transport and session access rules
+	options = !debug
+	source = mf-service-dcf2ee73d944b159bf247267416fb5b25db614cb.tar.gz::https://github.com/srdiogo/mf-service/archive/dcf2ee73d944b159bf247267416fb5b25db614cb.tar.gz
+	sha256sums = 775ba9cd73569371c198f91e859d0fca85a63e18aa09995a111453eb13aae6bd
+
+pkgname = mf-service

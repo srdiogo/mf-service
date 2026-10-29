@@ -1,2 +1,5 @@
 /target/
 /.cache/
+__pycache__/
+*.py[cod]
+/dist/

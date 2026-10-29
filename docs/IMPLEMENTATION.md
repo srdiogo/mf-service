@@ -15,8 +15,9 @@
 
 The foreground implementation and locked `mf-core` dependency are present.
 Coordinator, persistence and real Unix-socket tests use deterministic devices
-only in tests. Hardware, two-UI-client and clean-machine release checks remain
-open; passing software tests does not complete those gates.
+only in tests. Bounded MF4 hardware integration is recorded in [the validation report](MF4_VALIDATION.md).
+Two independent UI clients, clean-machine installation, other sample rates and
+controlled disconnect/recovery acceptance remain open.
 
 ## Automated acceptance
 
@@ -61,8 +62,8 @@ logs. Do not cycle power/phantom solely to complete an unrelated software test.
 The initial release requires the core extraction, contract tests, capability
 gates, durable outcomes, bounded queues, reconnect handling and a tested package.
 Logo-button decoding remains unavailable. MF4 signal meters are calibrated and
-implemented as ephemeral subscriptions;
-neither may be represented by mock data in a shipping UI. Full MF1/MF2 GUI
+implemented as ephemeral subscriptions. Unavailable features must never be
+represented by mock data in a shipping UI. Full MF1/MF2 GUI
 controls require their own evidence and hardware regression checks.
 
 The service starts by explicit user/session configuration, not by changing
@@ -76,5 +77,5 @@ The implementation includes fixed-target live controls with initial snapshots,
 durable sample intent, grouped core evidence, bounded samples/lease and final
 settlement. Tests cover intermediate/final gains, idempotency, invalid values,
 external complete-state changes, exclusive admission, cancellation, client
-loss, process restart and pre-dispatch metadata failure. This software coverage
-does not establish a hardware update rate or physical-switch readback.
+loss, process restart and pre-dispatch metadata failure. Hardware observations for input readback and meter cadence are recorded
+separately; software tests do not establish a guaranteed control update rate.

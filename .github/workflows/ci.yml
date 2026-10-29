@@ -18,4 +18,29 @@ jobs:
       - run: cargo test --locked
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo build --release --locked
+      - run: make check-distribution
       - run: make install DESTDIR="$RUNNER_TEMP/package"
+      - run: tar -C "$RUNNER_TEMP/package" -czf mf-service-linux-x86_64-preview.tar.gz .
+      - uses: actions/upload-artifact@v4
+        if: matrix.toolchain == 'stable'
+        with:
+          name: mf-service-linux-x86_64-preview
+          path: mf-service-linux-x86_64-preview.tar.gz
+
+  arch-package:
+    runs-on: ubuntu-latest
+    container: archlinux:base
+    steps:
+      - run: pacman -Syu --noconfirm base-devel git rust python systemd
+      - uses: actions/checkout@v4
+      - name: Build pinned package as an unprivileged user
+        run: |
+          useradd --create-home builder
+          install -d -o builder -g builder /tmp/package
+          cp packaging/arch/PKGBUILD /tmp/package/PKGBUILD
+          chown builder:builder /tmp/package/PKGBUILD
+          runuser -u builder -- sh -c 'cd /tmp/package && makepkg --cleanbuild --noconfirm'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mf-service-arch-preview
+          path: /tmp/package/*.pkg.tar.zst
