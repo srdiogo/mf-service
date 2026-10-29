@@ -4,7 +4,7 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/mf-service
+ExecStart=@EXECUTABLE@
 Restart=on-failure
 RestartSec=2
 UMask=0077

@@ -1,14 +1,14 @@
 # mf-service
 
-A Rust user-session service for the MiniFuse Linux control platform. It gives
+A Rust user-session service for the [MiniFuse Linux control platform](https://github.com/srdiogo/mf-cli). It gives
 the standalone application and Omarchy plugin one capability-driven view of
 device state and a serialized, verified operation path through `mf-core`.
 
-**Status: implemented development version; not a hardware-validated release.**
+**Status: development preview with bounded MiniFuse 4 hardware validation.**
 The foreground server, Linux discovery, API, plans, durable operation identities,
 subscriptions and host presets are implemented. MF4 input switches and calibrated signal-meter subscriptions are implemented.
-Logo-button events and MF1/MF2 mixer operations remain unavailable. No unit or desktop startup is
-enabled by building or testing this repository.
+Logo-button events and MF1/MF2 mixer operations remain unavailable. Clean-machine and broader hardware acceptance remain open. Building or testing
+does not enable a unit or desktop startup.
 
 ## Build and run
 
@@ -41,6 +41,8 @@ gain conversion, snapshot restore and rollback have one implementation there.
 - [Architecture, bounds and lifecycle](docs/ARCHITECTURE.md)
 - [Implementation status and validation](docs/IMPLEMENTATION.md)
 - [Installation and troubleshooting](docs/INSTALL.md)
+- [Hardware integration validation](docs/MF4_VALIDATION.md)
+- [Contribution workflow](CONTRIBUTING.md)
 - [Canonical service/client fixtures](tests/contract/README.md)
 
 First negotiate `hello`, then obtain inventory and a confirmed state baseline.
@@ -71,3 +73,7 @@ Signal meters are read-only, subscriber-driven ephemeral events with a target
 ceiling of 20 Hz. They do not change state revisions or create journals. Mix
 peaks are after master gain and before destination routing; they can differ
 from physical output levels when USB direct bypasses the custom mix.
+
+The standalone [MiniFuse Control GUI](https://github.com/srdiogo/minifuse-control)
+is a separate project. Clients share this service; protocol and kernel changes
+belong in [mf-core](https://github.com/srdiogo/mf-cli).
