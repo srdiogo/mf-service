@@ -44,7 +44,9 @@ gain conversion, snapshot restore and rollback have one implementation there.
 - [Canonical service/client fixtures](tests/contract/README.md)
 
 First negotiate `hello`, then obtain inventory and a confirmed state baseline.
-Controls use `plan_changes`/`plan_restore` and explicit `apply_plan`. Accepted
+Faders/pan use bounded continuous gestures through `begin_control` and
+`update_control`; discrete changes use `plan_changes`/`apply_plan`. Snapshot
+restore retains its comparison and explicit apply. See [live controls](docs/LIVE_CONTROLS.md). Accepted
 operations have durable IDs; completion is queried or delivered by event.
 A reconnect or timeout never permits automatic replay. Keep the client token
 and idempotency key when reconciling an uncertain request.

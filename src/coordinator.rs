@@ -12,15 +12,19 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "live.rs"]
+mod live;
+
 const MAX_PLANS: usize = 128;
 const MAX_OPERATIONS: usize = 4096;
-const EVENTS: [&str; 6] = [
+const EVENTS: [&str; 7] = [
     "device_added",
     "device_removed",
     "capabilities_changed",
     "state_changed",
     "operation_started",
     "operation_finished",
+    "control_updated",
 ];
 struct DeviceState {
     descriptor: Descriptor,
@@ -66,10 +70,18 @@ pub struct Coordinator<H: Hardware> {
     clients: HashMap<u64, Client>,
     pub pending_events: Vec<(u64, Value)>,
     work: VecDeque<Work>,
+    live: Option<live::Control>,
+    live_work: Option<live::Sample>,
 }
 fn public_operation(record: &Value) -> Value {
     let mut result = record.clone();
-    for key in ["client_token", "idempotency_key", "plan_digest", "plan_id"] {
+    for key in [
+        "client_token",
+        "idempotency_key",
+        "plan_digest",
+        "plan_id",
+        "begin",
+    ] {
         result
             .as_object_mut()
             .expect("Operation object")
@@ -119,8 +131,25 @@ impl<H: Hardware> Coordinator<H> {
             ) {
                 return Err(std::io::Error::other("Unsupported operation status"));
             }
+            if record["kind"] == "live_control"
+                && record["samples"].as_array().is_none_or(|s| {
+                    s.len() > 512
+                        || s.iter().enumerate().any(|(i, s)| {
+                            s["sequence"].as_u64() != Some(i as u64 + 1)
+                                || s.get("value").is_none()
+                                || !s["finish"].is_boolean()
+                        })
+                })
+            {
+                return Err(std::io::Error::other(
+                    "Invalid retained continuous-control samples",
+                ));
+            }
             if record["status"] == "pending" {
                 record["status"] = "indeterminate".into();
+                if record["kind"] == "live_control" {
+                    record["gesture_end"] = "interrupted".into();
+                }
                 record["device_outcome"] = "unknown".into();
                 record["device_write_attempted"] = Value::Null;
                 record["rollback_attempted"] = Value::Null;
@@ -141,6 +170,8 @@ impl<H: Hardware> Coordinator<H> {
             clients: HashMap::new(),
             pending_events: Vec::new(),
             work: VecDeque::new(),
+            live: None,
+            live_work: None,
         })
     }
     pub fn connected(&mut self, id: u64) {
@@ -156,7 +187,12 @@ impl<H: Hardware> Coordinator<H> {
         );
     }
     pub fn disconnected(&mut self, id: u64) {
-        self.clients.remove(&id);
+        if self.live.as_ref().is_some_and(|c| c.connection == id) {
+            self.end_control("disconnected");
+        }
+        if let Some(owner) = self.clients.remove(&id).and_then(|c| c.token) {
+            self.plans.retain(|_, p| p.owner != owner);
+        }
     }
     pub fn has_subscribers(&self) -> bool {
         self.clients.values().any(|c| !c.events.is_empty())
@@ -188,6 +224,13 @@ impl<H: Hardware> Coordinator<H> {
         )
     }
     pub fn refresh(&mut self) -> Result<()> {
+        if self
+            .live
+            .as_ref()
+            .is_some_and(|c| c.touched.elapsed() >= Duration::from_secs(30))
+        {
+            self.end_control("expired");
+        }
         let inventory = match self.hardware.inventory() {
             Ok(inventory) => inventory,
             Err(error) => {
@@ -411,7 +454,7 @@ impl<H: Hardware> Coordinator<H> {
             };
             self.clients.get_mut(&connection).unwrap().token = Some(token.clone());
             return Ok(
-                json!({"selected_api":1,"service_version":env!("CARGO_PKG_VERSION"),"epoch":self.epoch,"client_token":token,"features":["plans","subscriptions","presets","durable_operations"]}),
+                json!({"selected_api":1,"service_version":env!("CARGO_PKG_VERSION"),"epoch":self.epoch,"client_token":token,"features":["plans","subscriptions","presets","durable_operations","live_controls"]}),
             );
         }
         let owner = self
@@ -420,6 +463,9 @@ impl<H: Hardware> Coordinator<H> {
             .and_then(|c| c.token.clone())
             .ok_or_else(|| ApiError::invalid("Negotiate hello first"))?;
         match method {
+            "begin_control" => self.begin_control(connection, &owner, value),
+            "update_control" => self.update_control(connection, &owner, value),
+            "cancel_control" => self.cancel_control(&owner, value),
             "list_devices" => {
                 let _: protocol::Empty = protocol::params(value)?;
                 self.refresh()?;
@@ -533,7 +579,7 @@ impl<H: Hardware> Coordinator<H> {
                 if fs::read_dir(&self.paths.presets)
                     .map_err(|e| ApiError::invalid(e.to_string()))?
                     .count()
-                    >= 1024
+                    >= 256
                 {
                     return Err(ApiError::new("queue_full", "Preset store is full"));
                 }
@@ -601,6 +647,12 @@ impl<H: Hardware> Coordinator<H> {
             }
             return Ok(public_operation(existing));
         }
+        if self.live.is_some() {
+            return Err(ApiError::new(
+                "control_busy",
+                "A continuous control owns the interface",
+            ));
+        }
         let proposal = self
             .plans
             .get(&request.plan_id)
@@ -649,6 +701,10 @@ impl<H: Hardware> Coordinator<H> {
         Ok(public_operation(&record))
     }
     pub fn execute_next(&mut self) {
+        if self.live_work.is_some() {
+            self.execute_control();
+            return;
+        }
         let Some(Work {
             id,
             proposal,

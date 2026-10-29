@@ -2,7 +2,8 @@
 
 `v1.json` is generated from the real coordinator and the deterministic test
 backend in `tests/coordinator.rs`. It covers negotiation, state, planning,
-durable admission, verified completion and a structured error. It is never a
+durable admission, verified completion, intermediate/final continuous-control
+settlement and a structured error. It is never a
 production device or runtime fallback. Consumers must pin this repository's
 revision and the fixture SHA-256; do not hand-edit client copies or define a
 second wire specification.

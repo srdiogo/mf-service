@@ -52,6 +52,9 @@ or a stored preset. Plans include epoch/generation/revision and expire after
 | `subscribe` | Event names; optional device ID/generation | Subscription ID, current sequence and full relevant baseline |
 | `plan_changes` | Device ID, generation, expected revision, domain changes | Plan ID, predicted state, changes summary, expiry and omitted differences |
 | `plan_restore` | Device ID, generation, revision, bounded snapshot content, optional mix | Same plan result; unsupported fields reported |
+| `begin_control` | Device ID/generation, expected revision, fixed target, idempotency key | Durable pending gesture operation |
+| `update_control` | Operation ID, contiguous sequence, value, finish flag | Admission receipt; settlement by event/query |
+| `cancel_control` | Operation ID | Terminal gesture result; confirmed changes are retained |
 | `apply_plan` | Plan ID and idempotency key | Accepted operation ID; completion comes via event/query |
 | `get_operation` | Operation ID or the client's idempotency key | Pending/completed/indeterminate outcome and known verification details |
 | `capture_snapshot` | Device ID, generation | Schema-1 snapshot content from a confirmed read; no device writes |
@@ -99,7 +102,8 @@ Source removal's mute/solo side effects appear in the plan summary.
 ## Results and errors
 
 The confirmed operation outcome is one of `verified`, `failed_restored`,
-`failed_unrestored`, `unknown`, `rejected`. While admitted/queued/executing,
+`failed_unrestored`, `unknown`, `rejected`. A live gesture closed before any
+sample uses `not_attempted`. While admitted/queued/executing,
 the operation status is pending and has no invented terminal outcome.
 
 Return separate fields for `device_outcome`, `rollback_attempted`,
@@ -118,14 +122,14 @@ Required codes: `invalid_request`, `unsupported_api`, `unsupported_capability`,
 `access_denied`, `device_unavailable`, `ambiguous_device`, `module_incompatible`,
 `stale_state`, `device_changed`, `plan_expired`, `plan_unknown`,
 `idempotency_conflict`, `queue_full`, `backup_failed`, `operation_failed`,
-`journal_failed`, `outcome_unknown`, `subscriber_overflow`, `internal_error`.
+`journal_failed`, `control_busy`, `control_closed`, `outcome_unknown`, `subscriber_overflow`, `internal_error`.
 Messages explain recovery; clients branch on codes/fields, not English text.
 An error never instructs the GUI to rerun a mutation automatically.
 
 ## Events and subscription ordering
 
 Events: `device_added`, `device_removed`, `capabilities_changed`, `state_changed`,
-`operation_started`, `operation_finished`, `control_panel_requested`.
+`operation_started`, `control_updated`, `operation_finished`, `control_panel_requested`.
 The button event is advertised only with validated capability evidence.
 
 `subscribe` registers the stream and captures its baseline/sequence atomically
@@ -176,3 +180,39 @@ that spec artifact and execute the same success/error/lifecycle contract tests.
 Canonical complete examples are in `tests/contract/v1.json`. Unknown API majors,
 fields, kinds and unavailable event subscriptions are rejected explicitly.
 `device_write_attempted: null` represents uncertainty, not false.
+
+## Continuous controls
+
+`hello.features` advertises `live_controls`. The service accepts one active
+gesture at a time; normal new apply requests return `control_busy` during it.
+The immutable `target` is one of:
+
+```json
+{"kind":"channel_level","mix":"out12","source":"analog1"}
+{"kind":"channel_pan","mix":"out12","source":"analog1"}
+{"kind":"master_level","mix":"out12"}
+```
+
+Begin takes `device_id`, `generation`, `expected_revision`, `target` and
+`idempotency_key`. Update takes `operation_id`, `sequence` (1..512), `value`
+and `finish` (boolean). `value` is required: a gain number or null for silence;
+pan requires a number in 0..1. Existing model, mix and gain limits apply.
+An identical retained sequence returns the same admission receipt without a
+second dispatch; changed reuse is rejected. The receipt is not a completion.
+Only one sample can be pending. A closed/reconnected gesture cannot resume.
+
+`control_updated` carries the durable operation record after an intermediate
+sample settles: `status: pending`, `sample_sequence`, last sample verification
+facts and bounded accepted `samples`. A final sample emits
+`operation_finished` with `gesture_end: finished`. Other terminal reasons are
+`cancelled`, `disconnected`, `expired`, `conflict`, `failed`, `sample_limit` or
+post-crash `interrupted`. None claims that an unsent final pointer value was
+applied. The gesture's `device_write_attempted` covers any admitted sample;
+rollback/state/journal facts describe the last settled sample. Per-sample core
+records remain in `backup_group`, including the initial baseline.
+
+State events for a verified sample equal to its complete predicted readback
+include that gesture's `operation_id`. Clients can preserve the active preview
+on those events; unassociated changes still invalidate the old edit. The
+kernel's full-state guard remains authoritative. Lease and coalescing behavior,
+evidence retention and recovery are specified in [LIVE_CONTROLS.md](LIVE_CONTROLS.md).

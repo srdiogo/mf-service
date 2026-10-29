@@ -22,6 +22,7 @@ src/
   server.rs           socket admission, framing deadlines and bounded writers
   protocol.rs         strict envelopes, domain DTOs and error codes
   coordinator.rs      revisions, plans, subscriptions and durable outcomes
+  live.rs             fixed-target gestures, sample intents and settlement
   hardware.rs         descriptor discovery and real mf-core adapter
   storage.rs          exclusive private records and atomic finalization
 tests/
@@ -72,10 +73,12 @@ inferred B2 query. Capability evidence is tied to model/layout and testing.
    journal outcomes. Refresh state before permitting further work after an
    uncertain outcome.
 
-First-release faders commit on release. A later live-control mode must define
-coalescing, stale requests and durable journaling separately; it cannot bypass
-backups for speed. The service does not provide a global lock against direct
-CLI/external callers. Their changes must still trigger conflict/readback guards.
+Continuous fader/pan gestures use a fixed typed target and one durable service
+operation identity. Each sample still runs through unchanged core backup,
+journal, full-state verification and rollback. Clients coalesce pointer input
+into one in-flight sample plus one latest desired value. See the exact
+[continuous-control contract](LIVE_CONTROLS.md). Direct CLI/external writers
+remain possible and trigger conflict/readback guards.
 
 Idempotency keys are scoped to an explicit client token and canonical request
 digest. Reusing a key with a different request is an error. Persist the key and
@@ -86,8 +89,9 @@ with a documented policy that never deletes evidence for unresolved work.
 
 ## Disconnection and shutdown
 
-Connection loss invalidates every outstanding plan and rejects work not yet
-started. If removal happens after dispatch, report the actual known result;
+Client connection loss invalidates its unsubmitted plans and ends live gestures.
+Already admitted ordinary operations retain their durable identities and may
+settle after the caller disconnects. Device connection loss invalidates plans. If removal happens after dispatch, report the actual known result;
 do not claim rollback when it could not be verified. Reconnection creates a
 new generation and reads a baseline; it never restores presets automatically.
 

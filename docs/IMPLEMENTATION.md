@@ -68,3 +68,12 @@ The service starts by explicit user/session configuration, not by changing
 system audio. Document socket location, access setup, foreground diagnostics,
 user-unit startup/shutdown and complete package removal. Verify a clean install
 without enabling any desktop integration unless the user selects it.
+
+## Continuous interaction coverage
+
+The implementation includes fixed-target live controls with initial snapshots,
+durable sample intent, grouped core evidence, bounded samples/lease and final
+settlement. Tests cover intermediate/final gains, idempotency, invalid values,
+external complete-state changes, exclusive admission, cancellation, client
+loss, process restart and pre-dispatch metadata failure. This software coverage
+does not establish a hardware update rate or physical-switch readback.
