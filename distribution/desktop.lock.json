@@ -3,10 +3,10 @@
   "api_major": 1,
   "gui": {
     "repository": "https://github.com/srdiogo/minifuse-control",
-    "commit": "9162f292b6980a029fc93f038c3c9cbb40af4b1e",
-    "archive_sha256": "68cccb6f2f7b74c65469f711cec27fdf334fadeae948afd5a0bebe61a4777d55",
-    "recipe_commit": "f6342b5a0cabdf69c12577b4d050d8de17818086",
-    "recipe_sha256": "005d5bafb6cf6893f009667ce7d07da79e82e830129a06d96149645f833ea49f"
+    "commit": "24815101f689b909f5228074395ecb5dd671450b",
+    "archive_sha256": "4f040e1be5c94197e5bd436c7b30dd1d74be778376af426a8e114c8804fdb59a",
+    "recipe_commit": "5e50d8f652ef17884d3c9bf93e05b59758b2c3cb",
+    "recipe_sha256": "370a9471efb8cf3973ba409f411e88867f8b7b2dc02ce247722abef1daaf67b7"
   },
   "plugin": {
     "id": "srdiogo.minifuse",

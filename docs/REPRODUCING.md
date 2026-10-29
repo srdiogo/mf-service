@@ -13,7 +13,7 @@ approved GUI and plugin source used for the desktop baseline. Their source
 archives are public:
 
 ```text
-https://codeload.github.com/srdiogo/minifuse-control/tar.gz/9162f292b6980a029fc93f038c3c9cbb40af4b1e
+https://codeload.github.com/srdiogo/minifuse-control/tar.gz/24815101f689b909f5228074395ecb5dd671450b
 https://codeload.github.com/srdiogo/omarchy-minifuse/tar.gz/3cc6116680a50794c933f930b4e498623c01c0cc
 ```
 
