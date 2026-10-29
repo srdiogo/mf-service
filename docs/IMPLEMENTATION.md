@@ -13,9 +13,10 @@
 6. Validate on hardware with recorded baseline/restore and controlled audio.
 7. Ship reviewed package/user-unit files with documented optional enablement.
 
-These are implementation increments of the production architecture, not a
-separate prototype application. The repository currently has no Cargo manifest
-because there is no implemented executable or resolved `mf-core` dependency.
+The foreground implementation and locked `mf-core` dependency are present.
+Coordinator, persistence and real Unix-socket tests use deterministic devices
+only in tests. Hardware, two-UI-client and clean-machine release checks remain
+open; passing software tests does not complete those gates.
 
 ## Automated acceptance
 

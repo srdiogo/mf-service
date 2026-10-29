@@ -1,7 +1,7 @@
 # Local control protocol v1 — draft
 
-This is the canonical proposed contract for both desktop clients. There is no
-server yet. Freeze the first version only after service/client contract tests.
+This is the canonical implemented API v1 candidate for both desktop clients.
+Freeze a stable release only after service/client and hardware acceptance tests.
 Use one published spec/fixture revision; do not maintain separate client specs.
 
 ## Transport and envelopes
@@ -10,7 +10,9 @@ UTF-8 JSON objects separated by LF on the Unix socket documented in
 [the architecture](ARCHITECTURE.md). On the wire each frame is one line; the
 examples below are formatted for reading. Maximum frame size: 256 KiB including
 LF. Reject invalid UTF-8, nonfinite numbers, duplicate object keys, oversize
-frames and unknown request fields. A partial frame has a bounded read deadline.
+frames and unknown request fields. A partial frame has a two-second deadline. At most 16 connections and 32
+outstanding request IDs per connection are admitted. Invalid framing closes
+the connection; error delivery for an unparseable frame is best effort.
 
 Requests have `api`, `id`, `method`, `params`. API major is integer `1`; IDs are
 nonempty client-chosen strings of at most 128 characters, unique among that
@@ -127,8 +129,10 @@ Events: `device_added`, `device_removed`, `capabilities_changed`, `state_changed
 The button event is advertised only with validated capability evidence.
 
 `subscribe` registers the stream and captures its baseline/sequence atomically
-within the coordinator. Later events have increasing sequence numbers in that
-service epoch. Clients apply no pre-baseline deltas. Detect gaps, overflow and
+within the coordinator. One subscription is allowed per connection. Later
+events have contiguous sequence numbers within that filtered subscription and
+service epoch, starting after the returned sequence; unrelated filtered events
+do not create gaps. Clients apply no pre-baseline deltas. Detect gaps, overflow and
 epoch changes; reconnect and obtain a complete baseline rather than guessing.
 Initial reads/reconnection do not synthesize button or operation events.
 
@@ -148,3 +152,27 @@ Additive fields/events can extend API v1 with capability negotiation. Changed
 meaning, framing, identity or mutation guarantees require a new API major.
 Freeze example fixtures with the first implementation tag; future clients pin
 that spec artifact and execute the same success/error/lifecycle contract tests.
+
+
+## Implemented result shapes
+
+- Inventory returns `{ "devices": [...] }`. Each entry carries `device_id`,
+  `generation`, model, connection, capabilities and an optional structured error.
+- State returns `device_id`, `generation`, `revision`, decoded `state` and
+  capabilities. Gains/pan remain configured values; there are no signal meters.
+- Plans return `plan_id`, epoch/identity/revision, `expires_in_ms` (30000),
+  `predicted_state` and `summary` (including omitted restore byte offsets).
+- Apply acknowledges a durable `operation_id` with status `pending`. The
+  completion event/query has status `completed` or `indeterminate`, and separate
+  device/recovery/journal facts. Internal client tokens/request digests are not
+  broadcast. A metadata-finalization failure can retain a known in-memory
+  device result; after restart a prepared record has unknown outcome.
+- Subscribe returns `subscription_id`, epoch, `seq`, inventory and confirmed
+  `states` as one atomic baseline. Reconnect to change filters.
+- Capture/load return snapshot JSON as a bounded string. Save assigns an opaque
+  preset ID and never overwrites an existing file. Inspect returns decoded
+  state/schema/layout/capability metadata without accessing hardware.
+
+Canonical complete examples are in `tests/contract/v1.json`. Unknown API majors,
+fields, kinds and unavailable event subscriptions are rejected explicitly.
+`device_write_attempted: null` represents uncertainty, not false.

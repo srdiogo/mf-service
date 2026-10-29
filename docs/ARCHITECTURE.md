@@ -1,6 +1,6 @@
 # Architecture and lifecycle
 
-Status: proposed design; no runtime implementation exists.
+Status: implemented development architecture; hardware/release gates remain open.
 
 ## Process model
 
@@ -14,21 +14,21 @@ refuses multiple MF4 devices; inventory may report them, but the service must
 not silently choose one. A device handle is a session token, not a USB address
 or a claim of serial-bound identity.
 
-Proposed source layout:
+Source ownership (coordination/discovery/outcomes currently share one module):
 
 ```text
 src/
-  main.rs             configuration and lifecycle
-  api/                wire DTOs, framing, dispatch and subscriptions
-  coordinator.rs      state revisions, plans, operation deduplication
-  worker.rs           bounded device/backend queue
-  discovery.rs        connection generations and model inventory
-  operations.rs       durable identities and outcome tracking
-  events.rs           typed internal events
+  main.rs             foreground lifecycle and signal handling
+  server.rs           socket admission, framing deadlines and bounded writers
+  protocol.rs         strict envelopes, domain DTOs and error codes
+  coordinator.rs      revisions, plans, subscriptions and durable outcomes
+  hardware.rs         descriptor discovery and real mf-core adapter
+  storage.rs          exclusive private records and atomic finalization
 tests/
-  contract/           shared fixtures and wire compatibility
-  service/            fake backend, timing, lifecycle and failure scenarios
-packaging/            future user unit/package files; never auto-installed
+  coordinator.rs      fake hardware, invariants and canonical fixture check
+  server.rs           real local sockets, framing, deadlines and backpressure
+  contract/v1.json    shared service/client contract fixture
+packaging/            optional user unit; never auto-installed
 ```
 
 ## Socket and local access
@@ -126,3 +126,25 @@ publishes `control_panel_requested`. It does not choose an application, run a
 command or depend on Omarchy. Keep that capability unavailable until short
 release, wraparound, reconnect and long-press behavior have been measured.
 Rebaseline on startup; counter contents alone must not activate a UI.
+
+
+## Current bounds and retention
+
+The implementation uses the standard Rust 1.85 Unix-socket/thread stack with
+Serde/serde_json/libc, pinned in `Cargo.lock`. There are at most 16 connections,
+32 admitted request slots, 32 pending operations, 64 outbound frames per client,
+128 plans total/eight per client, 4096 retained operations, 4096 client identities
+and 256 presets. A full store rejects admission; it never deletes unresolved
+evidence automatically. Archive resolved records explicitly while stopped.
+
+Polling is one second with subscribers and five seconds otherwise, plus reads
+for explicit state/planning/dispatch. These are initial implementation settings,
+not measured latency/stream-continuity claims. Descriptor identity includes the
+sysfs connection inode; session identity still is not serial-bound. MF1/MF2
+inventory does not issue B2 queries. Multiple MF4s remain ambiguous.
+
+Graceful stop ceases admission and allows ten seconds for the worker to settle.
+Expiry of that userspace budget cannot cancel a dispatched kernel ioctl. The
+process reports the limitation and retains durable prepared records; a restart
+classifies them as indeterminate and never replays them. The optional user unit
+allows twelve seconds before systemd's stop policy applies.

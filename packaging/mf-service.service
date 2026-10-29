@@ -1,0 +1,16 @@
+[Unit]
+Description=MiniFuse session control service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mf-service
+Restart=on-failure
+RestartSec=2
+UMask=0077
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX
+TimeoutStopSec=12
+
+[Install]
+WantedBy=graphical-session.target
