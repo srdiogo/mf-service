@@ -1,0 +1,38 @@
+# Maintainer: Diogo de Medeiros <sr.diogo@gmail.com>
+pkgname=mf-service
+pkgver=0.1.0.r7.g6111084
+pkgrel=1
+pkgdesc='User-session MiniFuse control service with verified device operations'
+arch=('x86_64')
+url='https://github.com/srdiogo/mf-service'
+license=('MIT')
+depends=('glibc' 'libgcc')
+makedepends=('rust>=1.85' 'python' 'systemd')
+options=('!debug')
+optdepends=('mf-cli-platform: matching MiniFuse kernel transport and session access rules')
+_commit=6111084c5ad67c7474bd1f0c2ea0a669d82dcf9b
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('9a02f4cae7a834149ec83494f2b6dcad4e2de3cda5bace2bd94ad98bd58401a3')
+
+prepare() {
+  cd "$pkgname-$_commit"
+  cargo fetch --locked --target x86_64-unknown-linux-gnu
+}
+
+build() {
+  cd "$pkgname-$_commit"
+  cargo build --release --frozen
+}
+
+check() {
+  cd "$pkgname-$_commit"
+  cargo test --frozen
+  make check-distribution
+}
+
+package() {
+  cd "$pkgname-$_commit"
+  make install DESTDIR="$pkgdir"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 docs/INSTALL.md "$pkgdir/usr/share/doc/$pkgname/INSTALL.md"
+}
