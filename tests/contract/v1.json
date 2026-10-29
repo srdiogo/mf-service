@@ -387,7 +387,8 @@
         "subscriptions",
         "presets",
         "durable_operations",
-        "live_controls"
+        "live_controls",
+        "signal_meters"
       ],
       "selected_api": 1,
       "service_version": "0.1.0"
@@ -1120,7 +1121,7 @@
         "host_snapshots": true,
         "input_switches": true,
         "limitations": [
-          "Input writes require a module advertising verified input-switch transactions; meters and button events are unavailable.",
+          "Input writes and signal meters require matching module features; logo-button events are unavailable.",
           "Membership is subject to the current mono/stereo topology.",
           "Readback does not confirm nonvolatile saving."
         ],
@@ -2300,6 +2301,474 @@
       "status": "pending"
     }
   },
+  "meter_state": {
+    "api": 1,
+    "id": "test-request",
+    "result": {
+      "capabilities": {
+        "control_panel_button": false,
+        "host_snapshots": true,
+        "input_switches": true,
+        "limitations": [
+          "Input writes and signal meters require matching module features; logo-button events are unavailable.",
+          "Membership is subject to the current mono/stereo topology.",
+          "Readback does not confirm nonvolatile saving."
+        ],
+        "mixer": true,
+        "mixes": [
+          {
+            "membership": [
+              "analog1",
+              "analog2",
+              "analog3",
+              "analog4",
+              "usb12",
+              "usb34"
+            ],
+            "mix": "out12",
+            "routes": [
+              "usb12",
+              "mix"
+            ],
+            "sources": [
+              "analog1",
+              "analog2",
+              "analog3",
+              "analog4",
+              "usb1",
+              "usb2",
+              "usb3",
+              "usb4"
+            ]
+          },
+          {
+            "membership": [
+              "analog1",
+              "analog2",
+              "analog3",
+              "analog4"
+            ],
+            "mix": "out34",
+            "routes": [
+              "usb34",
+              "mix"
+            ],
+            "sources": [
+              "analog1",
+              "analog2",
+              "analog3",
+              "analog4",
+              "usb1",
+              "usb2",
+              "usb3",
+              "usb4"
+            ]
+          },
+          {
+            "membership": [
+              "analog1",
+              "analog2",
+              "analog3",
+              "analog4",
+              "usb12",
+              "usb34",
+              "usb56"
+            ],
+            "mix": "loopback",
+            "routes": [
+              "usb56",
+              "mix",
+              "out12",
+              "out34"
+            ],
+            "sources": [
+              "analog1",
+              "analog2",
+              "analog3",
+              "analog4",
+              "usb1",
+              "usb2",
+              "usb3",
+              "usb4",
+              "usb5",
+              "usb6"
+            ]
+          }
+        ],
+        "signal_meters": true,
+        "switch_readback": true
+      },
+      "device_id": "fixture-device_id",
+      "generation": "fixture-generation",
+      "revision": "fixture-revision",
+      "state": {
+        "input3_trim_db": 18.03125,
+        "input4_trim_db": 16.6875,
+        "inputs": {
+          "inst1": true,
+          "inst2": true,
+          "phantom_power": false
+        },
+        "mixes": [
+          {
+            "channels": [
+              {
+                "channel": "analog1",
+                "derived_level_db": 4.29155,
+                "derived_pan": 0.5,
+                "left_db": 1.28125,
+                "mono_included": true,
+                "mute": true,
+                "right_db": 1.28125,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog2",
+                "derived_level_db": 4.518112,
+                "derived_pan": 0.5,
+                "left_db": 1.507813,
+                "mono_included": true,
+                "mute": true,
+                "right_db": 1.507813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog3",
+                "derived_level_db": 11.998581,
+                "derived_pan": 0.5,
+                "left_db": 8.988281,
+                "mono_included": true,
+                "mute": true,
+                "right_db": 8.988281,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog4",
+                "derived_level_db": 11.998581,
+                "derived_pan": 0.5,
+                "left_db": 8.988281,
+                "mono_included": true,
+                "mute": true,
+                "right_db": 8.988281,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "usb1",
+                "derived_level_db": 4.964844,
+                "derived_pan": 0.0,
+                "left_db": 4.964844,
+                "mono_included": false,
+                "mute": false,
+                "right_db": null,
+                "solo": false,
+                "stereo_pair_included": true
+              },
+              {
+                "channel": "usb2",
+                "derived_level_db": 4.964844,
+                "derived_pan": 1.0,
+                "left_db": null,
+                "mono_included": false,
+                "mute": false,
+                "right_db": 4.964844,
+                "solo": false,
+                "stereo_pair_included": true
+              },
+              {
+                "channel": "usb3",
+                "derived_level_db": 0.0,
+                "derived_pan": 0.0,
+                "left_db": 0.0,
+                "mono_included": false,
+                "mute": true,
+                "right_db": null,
+                "solo": false,
+                "stereo_pair_included": true
+              },
+              {
+                "channel": "usb4",
+                "derived_level_db": 0.0,
+                "derived_pan": 1.0,
+                "left_db": null,
+                "mono_included": false,
+                "mute": true,
+                "right_db": 0.0,
+                "solo": false,
+                "stereo_pair_included": true
+              }
+            ],
+            "master_db": -6.0,
+            "mix": "out12",
+            "mono_mask": 15,
+            "route": "mix",
+            "route_value": 1,
+            "stereo_mask": 12
+          },
+          {
+            "channels": [
+              {
+                "channel": "analog1",
+                "derived_level_db": 3.846237,
+                "derived_pan": 0.5,
+                "left_db": 0.835938,
+                "mono_included": true,
+                "mute": true,
+                "right_db": 0.835938,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog2",
+                "derived_level_db": -0.669388,
+                "derived_pan": 0.5,
+                "left_db": -3.679688,
+                "mono_included": true,
+                "mute": true,
+                "right_db": -3.679688,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog3",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": true,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog4",
+                "derived_level_db": 4.845711,
+                "derived_pan": 0.491841,
+                "left_db": 1.945313,
+                "mono_included": true,
+                "mute": true,
+                "right_db": 1.722656,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "usb1",
+                "derived_level_db": 3.814987,
+                "derived_pan": 0.5,
+                "left_db": 0.804688,
+                "mono_included": false,
+                "mute": true,
+                "right_db": 0.804688,
+                "solo": false,
+                "stereo_pair_included": true
+              },
+              {
+                "channel": "usb2",
+                "derived_level_db": 3.814987,
+                "derived_pan": 0.5,
+                "left_db": 0.804688,
+                "mono_included": false,
+                "mute": true,
+                "right_db": 0.804688,
+                "solo": false,
+                "stereo_pair_included": true
+              },
+              {
+                "channel": "usb3",
+                "derived_level_db": -15.212356,
+                "derived_pan": 0.5,
+                "left_db": -18.222656,
+                "mono_included": false,
+                "mute": false,
+                "right_db": -18.222656,
+                "solo": false,
+                "stereo_pair_included": true
+              },
+              {
+                "channel": "usb4",
+                "derived_level_db": -15.212356,
+                "derived_pan": 0.5,
+                "left_db": -18.222656,
+                "mono_included": false,
+                "mute": false,
+                "right_db": -18.222656,
+                "solo": false,
+                "stereo_pair_included": true
+              }
+            ],
+            "master_db": -10.007813,
+            "mix": "out34",
+            "mono_mask": 15,
+            "route": "mix",
+            "route_value": 3,
+            "stereo_mask": 12
+          },
+          {
+            "channels": [
+              {
+                "channel": "analog1",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog2",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog3",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "analog4",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "usb1",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "usb2",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "usb3",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "usb4",
+                "derived_level_db": 0.002487,
+                "derived_pan": 0.5,
+                "left_db": -3.007813,
+                "mono_included": false,
+                "mute": true,
+                "right_db": -3.007813,
+                "solo": false,
+                "stereo_pair_included": false
+              },
+              {
+                "channel": "usb5",
+                "derived_level_db": -1.335933,
+                "derived_pan": 0.000636,
+                "left_db": -1.335938,
+                "mono_included": false,
+                "mute": false,
+                "right_db": -61.339844,
+                "solo": false,
+                "stereo_pair_included": true
+              },
+              {
+                "channel": "usb6",
+                "derived_level_db": -1.335933,
+                "derived_pan": 0.999364,
+                "left_db": -61.339844,
+                "mono_included": false,
+                "mute": false,
+                "right_db": -1.335938,
+                "solo": false,
+                "stereo_pair_included": true
+              }
+            ],
+            "master_db": 0.0,
+            "mix": "loopback",
+            "mono_mask": 0,
+            "route": "mix",
+            "route_value": 5,
+            "stereo_mask": 16
+          }
+        ],
+        "note": "Levels/pan are derived from stored gains, not signal meters. Trims are read-only.",
+        "opaque_header_hex": "030000000000000000000100000008000200",
+        "opaque_tail_hex": "0000000000000d60"
+      }
+    }
+  },
+  "meters": {
+    "data": {
+      "available": true,
+      "device_id": "fixture-device_id",
+      "generation": "fixture-generation",
+      "mixes_dbfs": [
+        [
+          -86.0,
+          null
+        ],
+        [
+          -86.0,
+          null
+        ],
+        [
+          -86.0,
+          null
+        ]
+      ],
+      "sources_dbfs": [
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0,
+        -80.0
+      ]
+    },
+    "epoch": "fixture-epoch",
+    "event": "meters_updated",
+    "seq": 1
+  },
   "plan": {
     "api": 1,
     "id": "test-request",
@@ -2663,7 +3132,7 @@
         "host_snapshots": true,
         "input_switches": false,
         "limitations": [
-          "Input writes require a module advertising verified input-switch transactions; meters and button events are unavailable.",
+          "Input writes and signal meters require matching module features; logo-button events are unavailable.",
           "Membership is subject to the current mono/stereo topology.",
           "Readback does not confirm nonvolatile saving."
         ],

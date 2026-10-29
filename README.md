@@ -6,8 +6,8 @@ device state and a serialized, verified operation path through `mf-core`.
 
 **Status: implemented development version; not a hardware-validated release.**
 The foreground server, Linux discovery, API, plans, durable operation identities,
-subscriptions and host presets are implemented. Physical-button events, meters
-and MF1/MF2 mixer operations remain unavailable. No unit or desktop startup is
+subscriptions and host presets are implemented. MF4 input switches and calibrated signal-meter subscriptions are implemented.
+Logo-button events and MF1/MF2 mixer operations remain unavailable. No unit or desktop startup is
 enabled by building or testing this repository.
 
 ## Build and run
@@ -31,7 +31,7 @@ falls back to a shared `/tmp` socket, starts as root, loads a module, detaches a
 audio driver or restores a preset automatically. Use Ctrl+C to stop it.
 
 The service currently pins `mf-core` commit
-`d7a2987b5514db1d3aed2f1e68e2ec534bd7276e`. The initial shared core was integrated by
+`936962fcef9320fbf0e0991bd095d9c6c9370dc4`. The initial shared core was integrated by
 [the shared-core PR](https://github.com/srdiogo/mf-cli/pull/2). USB semantics,
 gain conversion, snapshot restore and rollback have one implementation there.
 
@@ -66,3 +66,8 @@ INST2 and shared phantom-power changes use the same durable plan/apply path
 as mixer changes. Writes require the active module to advertise verified
 input-switch transactions; old modules retain readback without these writes.
 Mixer preset restoration never changes input mode or phantom power.
+
+Signal meters are read-only, subscriber-driven ephemeral events with a target
+ceiling of 20 Hz. They do not change state revisions or create journals. Mix
+peaks are after master gain and before destination routing; they can differ
+from physical output levels when USB direct bypasses the custom mix.

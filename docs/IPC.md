@@ -163,7 +163,7 @@ that spec artifact and execute the same success/error/lifecycle contract tests.
 - Inventory returns `{ "devices": [...] }`. Each entry carries `device_id`,
   `generation`, model, connection, capabilities and an optional structured error.
 - State returns `device_id`, `generation`, `revision`, decoded `state` and
-  capabilities. Gains/pan remain configured values; there are no signal meters.
+  capabilities. Gains/pan remain configured values; signal meters use separate ephemeral events.
 - Plans return `plan_id`, epoch/identity/revision, `expires_in_ms` (30000),
   `predicted_state` and `summary` (including omitted restore byte offsets).
 - Apply acknowledges a durable `operation_id` with status `pending`. The
@@ -231,3 +231,23 @@ durable operation admission, complete-state verification and outcome recovery.
 They are discrete actions, not continuous-control targets. Module feature
 changes invalidate outstanding plans and publish capability/state updates.
 Snapshot restoration continues to exclude these switches.
+
+## Signal meter subscription
+
+Negotiate `signal_meters` in `hello.features`, then include `meters_updated` in
+`subscribe.events`. Each event carries device ID, generation and `available`.
+When available, `sources_dbfs` has 10 values (Analog 1–4, USB 1–6) and
+`mixes_dbfs` has three stereo pairs (out12, out34, loopback). A null value means
+digital silence; numbers are finite peak dBFS at or below zero. Mix peaks are
+post-master and before destination route selection. They are not physical
+output meters when a destination bypasses its mix.
+
+The runtime `signal_meters` capability requires the mapped MF4 layout and the
+module's fixed C2 query. No USB meter reads occur without a matching subscriber.
+Polling targets at most 20 Hz; blocking control calls can delay it. Failures
+publish `available:false` and back off for one second. Identity mismatch never
+attaches a frame to the old device. Meter events do not change configuration
+revisions, invalidate plans or produce snapshots/journals. They share existing
+bounded event queues and disconnect-on-overflow behavior; stale data must clear
+in clients (the application uses a 500 ms freshness timeout). No frame is
+replayed after reconnect.

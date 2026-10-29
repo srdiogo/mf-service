@@ -60,7 +60,8 @@ logs. Do not cycle power/phantom solely to complete an unrelated software test.
 
 The initial release requires the core extraction, contract tests, capability
 gates, durable outcomes, bounded queues, reconnect handling and a tested package.
-Physical-button decoding and signal meters remain unavailable until validated;
+Logo-button decoding remains unavailable. MF4 signal meters are calibrated and
+implemented as ephemeral subscriptions;
 neither may be represented by mock data in a shipping UI. Full MF1/MF2 GUI
 controls require their own evidence and hardware regression checks.
 

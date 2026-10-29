@@ -27,6 +27,9 @@ struct Data {
     reads: usize,
     writes: usize,
     input_switches: bool,
+    signal_meters: bool,
+    meter_reads: usize,
+    meter_failure: bool,
 }
 impl Fake {
     fn new() -> Self {
@@ -45,6 +48,9 @@ impl Fake {
             reads: 0,
             writes: 0,
             input_switches: false,
+            signal_meters: false,
+            meter_reads: 0,
+            meter_failure: false,
         })))
     }
 }
@@ -69,9 +75,28 @@ impl Hardware for Fake {
         Ok((d.descriptors[0].device.clone(), d.state.clone()))
     }
     fn module_capabilities(&mut self) -> Result<ModuleCapabilities> {
+        let d = self.0.lock().unwrap();
         Ok(ModuleCapabilities {
-            input_switches: self.0.lock().unwrap().input_switches,
+            input_switches: d.input_switches,
+            signal_meters: d.signal_meters,
         })
+    }
+    fn meters(&mut self) -> Result<(Device, mf_core::Meters)> {
+        let mut d = self.0.lock().unwrap();
+        d.meter_reads += 1;
+        if d.meter_failure {
+            return Err(protocol::ApiError::new(
+                "transfer_failed",
+                "Injected meter failure",
+            ));
+        }
+        Ok((
+            d.descriptors[0].device.clone(),
+            mf_core::Meters {
+                sources_dbfs: [Some(-80.0); 10],
+                mixes_dbfs: [[Some(-86.0), None]; 3],
+            },
+        ))
     }
     fn execute(&mut self, plan: &Plan, backups: &Path) -> std::result::Result<Outcome, Error> {
         mf_core::execute(self, plan, backups)
@@ -497,6 +522,13 @@ fn canonical_wire_fixture_matches_the_implemented_service() {
     fixture["input_plan"] = input_plan;
     fixture["input_accepted"] = input_accepted;
     fixture["input_finished"] = input_finished;
+    test.hardware.0.lock().unwrap().signal_meters = true;
+    let meter_state = test.state();
+    test.call("subscribe", json!({"events":["meters_updated"]}));
+    test.coordinator.pending_events.clear();
+    test.coordinator.poll_meters();
+    fixture["meter_state"] = json!({"api":1,"id":"test-request","result":meter_state});
+    fixture["meters"] = test.coordinator.pending_events[0].1.clone();
     normalize(&mut fixture);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/contract/v1.json");
     if std::env::var_os("MF_SERVICE_UPDATE_FIXTURES").is_some() {
@@ -765,4 +797,50 @@ fn live_finalization_failure_retains_known_facts_and_closes_the_gesture() {
         "control_closed"
     );
     assert_eq!(test.hardware.0.lock().unwrap().writes, 1);
+}
+
+#[test]
+fn meter_samples_are_gated_ephemeral_and_failure_clears_data() {
+    let mut test = Test::new();
+    test.hardware.0.lock().unwrap().signal_meters = true;
+    let before = test.state();
+    test.coordinator.poll_meters();
+    assert_eq!(test.hardware.0.lock().unwrap().meter_reads, 0);
+    test.call("subscribe", json!({"events":["meters_updated"]}));
+    test.coordinator.pending_events.clear();
+    for _ in 0..3 {
+        test.coordinator.poll_meters();
+    }
+    assert_eq!(test.hardware.0.lock().unwrap().meter_reads, 3);
+    assert_eq!(test.coordinator.pending_events.len(), 3);
+    for (_, frame) in &test.coordinator.pending_events {
+        assert_eq!(frame["event"], "meters_updated");
+        assert_eq!(frame["data"]["available"], true);
+        assert_eq!(frame["data"]["generation"], before["generation"]);
+        assert_eq!(frame["data"]["sources_dbfs"][0], -80.0);
+    }
+    let after = test.state();
+    assert_eq!(before["revision"], after["revision"]);
+    assert_eq!(before["state"], after["state"]);
+    assert_eq!(test.hardware.0.lock().unwrap().writes, 0);
+    assert!(!test.directory.join("backups").exists());
+    assert_eq!(
+        fs::read_dir(test.directory.join("metadata/operations"))
+            .unwrap()
+            .count(),
+        0
+    );
+    test.hardware.0.lock().unwrap().meter_failure = true;
+    test.coordinator.pending_events.clear();
+    test.coordinator.poll_meters();
+    assert_eq!(
+        test.coordinator.pending_events[0].1["data"]["available"],
+        false
+    );
+    let reads = test.hardware.0.lock().unwrap().meter_reads;
+    test.coordinator.poll_meters();
+    assert_eq!(test.hardware.0.lock().unwrap().meter_reads, reads); // Error backoff.
+    test.hardware.0.lock().unwrap().signal_meters = false;
+    test.coordinator.refresh().unwrap();
+    assert_eq!(test.state()["capabilities"]["signal_meters"], false);
 }

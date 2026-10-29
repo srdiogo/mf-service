@@ -17,7 +17,7 @@ mod live;
 
 const MAX_PLANS: usize = 128;
 const MAX_OPERATIONS: usize = 4096;
-const EVENTS: [&str; 7] = [
+const EVENTS: [&str; 8] = [
     "device_added",
     "device_removed",
     "capabilities_changed",
@@ -25,6 +25,7 @@ const EVENTS: [&str; 7] = [
     "operation_started",
     "operation_finished",
     "control_updated",
+    "meters_updated",
 ];
 struct DeviceState {
     descriptor: Descriptor,
@@ -34,11 +35,13 @@ struct DeviceState {
     state: Option<State>,
     error: Option<ApiError>,
     module: ModuleCapabilities,
+    meter_retry: Instant,
 }
 impl DeviceState {
     fn capabilities(&self) -> Capabilities {
         let mut capabilities = self.descriptor.model.capabilities();
         capabilities.input_switches &= self.state.is_some() && self.module.input_switches;
+        capabilities.signal_meters &= self.state.is_some() && self.module.signal_meters;
         capabilities
     }
     fn validate_plan(&self, plan: &Plan) -> Result<()> {
@@ -214,6 +217,43 @@ impl<H: Hardware> Coordinator<H> {
     pub fn has_subscribers(&self) -> bool {
         self.clients.values().any(|c| !c.events.is_empty())
     }
+    pub fn has_meter_subscribers(&self) -> bool {
+        self.clients
+            .values()
+            .any(|c| c.events.contains("meters_updated"))
+    }
+    /// Ephemeral samples never alter revisions, snapshots, plans or journals.
+    pub fn poll_meters(&mut self) {
+        for i in 0..self.devices.len() {
+            let d = &self.devices[i];
+            if Instant::now() < d.meter_retry
+                || !d.capabilities().signal_meters
+                || !self.clients.values().any(|c| {
+                    c.events.contains("meters_updated")
+                        && c.device.as_ref().is_none_or(|id| id == &d.id)
+                })
+            {
+                continue;
+            }
+            let id = d.id.clone();
+            let generation = d.generation.clone();
+            let result = self.hardware.meters();
+            let data = match result {
+                Ok((device, meters)) if device == self.devices[i].descriptor.device => {
+                    json!({"device_id":id,"generation":generation,"available":true,
+                        "sources_dbfs":meters.sources_dbfs,"mixes_dbfs":meters.mixes_dbfs})
+                }
+                result => {
+                    self.devices[i].meter_retry = Instant::now() + Duration::from_secs(1);
+                    let error = result.err().unwrap_or_else(|| {
+                        ApiError::new("device_changed", "Meter device identity changed")
+                    });
+                    json!({"device_id":id,"generation":generation,"available":false,"error":error.value()})
+                }
+            };
+            self.emit("meters_updated", Some(&id), data);
+        }
+    }
     fn emit(&mut self, event: &str, device: Option<&str>, data: Value) {
         self.seq += 1;
         for (&id, client) in &mut self.clients {
@@ -293,6 +333,7 @@ impl<H: Hardware> Coordinator<H> {
                     state: None,
                     error: None,
                     module: ModuleCapabilities::default(),
+                    meter_retry: Instant::now(),
                 }
             };
             self.devices.push(entry);
@@ -483,7 +524,7 @@ impl<H: Hardware> Coordinator<H> {
             };
             self.clients.get_mut(&connection).unwrap().token = Some(token.clone());
             return Ok(
-                json!({"selected_api":1,"service_version":env!("CARGO_PKG_VERSION"),"epoch":self.epoch,"client_token":token,"features":["plans","subscriptions","presets","durable_operations","live_controls"]}),
+                json!({"selected_api":1,"service_version":env!("CARGO_PKG_VERSION"),"epoch":self.epoch,"client_token":token,"features":["plans","subscriptions","presets","durable_operations","live_controls","signal_meters"]}),
             );
         }
         let owner = self

@@ -274,6 +274,7 @@ pub fn run<H: Hardware>(
     let worker = thread::spawn(move || {
         let mut peers = HashMap::<u64, Peer>::new();
         let mut refreshed = Instant::now();
+        let mut metered = Instant::now();
         while !stop.load(Ordering::Acquire) {
             let dead: Vec<_> = peers
                 .iter()
@@ -286,7 +287,12 @@ pub fn run<H: Hardware>(
                 }
                 coordinator.disconnected(id);
             }
-            match rx.recv_timeout(Duration::from_millis(100)) {
+            let wait = if coordinator.has_meter_subscribers() {
+                25
+            } else {
+                100
+            };
+            match rx.recv_timeout(Duration::from_millis(wait)) {
                 Ok(Message::Add(id, peer)) => {
                     coordinator.connected(id);
                     peers.insert(id, peer);
@@ -313,6 +319,11 @@ pub fn run<H: Hardware>(
             if refreshed.elapsed() >= interval {
                 let _ = coordinator.refresh();
                 refreshed = Instant::now();
+            }
+            if coordinator.has_meter_subscribers() && metered.elapsed() >= Duration::from_millis(50)
+            {
+                coordinator.poll_meters();
+                metered = Instant::now();
             }
             for (id, event) in coordinator.pending_events.drain(..) {
                 if let Some(peer) = peers.get(&id) {
