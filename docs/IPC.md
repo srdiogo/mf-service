@@ -216,3 +216,18 @@ include that gesture's `operation_id`. Clients can preserve the active preview
 on those events; unassociated changes still invalidate the old edit. The
 kernel's full-state guard remains authoritative. Lease and coalescing behavior,
 evidence retention and recovery are specified in [LIVE_CONTROLS.md](LIVE_CONTROLS.md).
+
+## MF4 input switches
+
+Confirmed `state.inputs` has boolean `inst1`, `inst2` and `phantom_power` fields.
+`switch_readback` is model-specific; `input_switches` additionally requires the
+active module feature. It must not be inferred from the model or remembered
+commands. The standard state subscription reflects physical switch changes.
+
+`plan_changes` accepts `{"kind":"input_switch","target":"inst1","enabled":true}`.
+The other targets are `inst2` and `phantom_power`; the last is shared by physical
+inputs 1–2. Only booleans are accepted. These use ordinary immutable plans,
+durable operation admission, complete-state verification and outcome recovery.
+They are discrete actions, not continuous-control targets. Module feature
+changes invalidate outstanding plans and publish capability/state updates.
+Snapshot restoration continues to exclude these switches.

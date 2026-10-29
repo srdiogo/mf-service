@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 use crate::protocol::{ApiError, Result};
-use mf_core::{Device, Kernel, Model, Outcome, Plan, State, VID};
+use mf_core::{Device, Kernel, Model, ModuleCapabilities, Outcome, Plan, State, VID};
 use std::{fs, os::unix::fs::MetadataExt, path::Path};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -12,6 +12,9 @@ pub struct Descriptor {
 pub trait Hardware: Send + 'static {
     fn inventory(&mut self) -> Result<Vec<Descriptor>>;
     fn read(&mut self) -> Result<(Device, State)>;
+    fn module_capabilities(&mut self) -> Result<ModuleCapabilities> {
+        Ok(ModuleCapabilities::default())
+    }
     fn execute(
         &mut self,
         plan: &Plan,
@@ -59,6 +62,11 @@ impl Hardware for Linux {
     }
     fn read(&mut self) -> Result<(Device, State)> {
         Kernel::open(false)?.read().map_err(Into::into)
+    }
+    fn module_capabilities(&mut self) -> Result<ModuleCapabilities> {
+        Kernel::open(false)?
+            .module_capabilities()
+            .map_err(Into::into)
     }
     fn execute(
         &mut self,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-use mf_core::{Level, Mix, Operation};
+use mf_core::{InputSwitch, Level, Mix, Operation};
 use serde::{
     Deserialize, Deserializer,
     de::{self, MapAccess, SeqAccess, Visitor},
@@ -238,6 +238,10 @@ fn flag<'de, D: Deserializer<'de>>(d: D) -> std::result::Result<Option<bool>, D:
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum WireChange {
+    InputSwitch {
+        target: InputSwitch,
+        enabled: bool,
+    },
     Channel {
         mix: Mix,
         source: String,
@@ -268,6 +272,7 @@ pub enum WireChange {
 impl From<WireChange> for Operation {
     fn from(change: WireChange) -> Self {
         match change {
+            WireChange::InputSwitch { target, enabled } => Self::InputSwitch { target, enabled },
             WireChange::Channel {
                 mix,
                 source,

@@ -23,7 +23,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 [[package]]
 name = "mf-core"
 version = "0.1.0"
-source = "git+https://github.com/srdiogo/mf-cli?rev=4775fd23e0bff5b28bbd138e4108dc8e519a0021#4775fd23e0bff5b28bbd138e4108dc8e519a0021"
+source = "git+https://github.com/srdiogo/mf-cli?rev=d7a2987b5514db1d3aed2f1e68e2ec534bd7276e#d7a2987b5514db1d3aed2f1e68e2ec534bd7276e"
 dependencies = [
  "libc",
  "serde",

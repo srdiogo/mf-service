@@ -31,7 +31,7 @@ falls back to a shared `/tmp` socket, starts as root, loads a module, detaches a
 audio driver or restores a preset automatically. Use Ctrl+C to stop it.
 
 The service currently pins `mf-core` commit
-`4775fd23e0bff5b28bbd138e4108dc8e519a0021`, integrated by
+`d7a2987b5514db1d3aed2f1e68e2ec534bd7276e`. The initial shared core was integrated by
 [the shared-core PR](https://github.com/srdiogo/mf-cli/pull/2). USB semantics,
 gain conversion, snapshot restore and rollback have one implementation there.
 
@@ -60,3 +60,9 @@ Effects, firmware/device-storage writes, raw USB/selectors and host audio
 configuration changes are outside scope. This is an independent community
 project. New material is [MIT licensed](LICENSE); upstream/protocol research
 credits remain in the `mf-cli` evidence record.
+
+MF4 input switch state is read from the validated B2 fields. Typed INST1,
+INST2 and shared phantom-power changes use the same durable plan/apply path
+as mixer changes. Writes require the active module to advertise verified
+input-switch transactions; old modules retain readback without these writes.
+Mixer preset restoration never changes input mode or phantom power.

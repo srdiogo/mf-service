@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
-use mf_core::{Backend, Device, Error, ErrorKind, MF4_PID, Model, Outcome, Plan, State, VID};
+use mf_core::{
+    Backend, Device, Error, ErrorKind, MF4_PID, Model, ModuleCapabilities, Outcome, Plan, State,
+    VID,
+};
 use mf_service::{
     coordinator::Coordinator,
     hardware::{Descriptor, Hardware},
@@ -23,6 +26,7 @@ struct Data {
     state: State,
     reads: usize,
     writes: usize,
+    input_switches: bool,
 }
 impl Fake {
     fn new() -> Self {
@@ -40,6 +44,7 @@ impl Fake {
             state: State::from_hex(include_str!("fixtures/windows-b2.hex").trim()).unwrap(),
             reads: 0,
             writes: 0,
+            input_switches: false,
         })))
     }
 }
@@ -62,6 +67,11 @@ impl Hardware for Fake {
         let mut d = self.0.lock().unwrap();
         d.reads += 1;
         Ok((d.descriptors[0].device.clone(), d.state.clone()))
+    }
+    fn module_capabilities(&mut self) -> Result<ModuleCapabilities> {
+        Ok(ModuleCapabilities {
+            input_switches: self.0.lock().unwrap().input_switches,
+        })
     }
     fn execute(&mut self, plan: &Plan, backups: &Path) -> std::result::Result<Outcome, Error> {
         mf_core::execute(self, plan, backups)
@@ -155,6 +165,9 @@ fn rejects_unsafe_wire_and_distinguishes_silence_from_omission() {
         json!({"kind":"master","mix":"out12"}),
         json!({"kind":"master","mix":"out12","level_db":1}),
         json!({"kind":"raw","selector":0x900,"value":0}),
+        json!({"kind":"input_switch","target":"inst3","enabled":true}),
+        json!({"kind":"input_switch","target":"inst1","enabled":1}),
+        json!({"kind":"input_switch","target":"phantom_power","enabled":null}),
     ] {
         let result=test.call("plan_changes",json!({"device_id":state["device_id"],"generation":state["generation"],"expected_revision":state["revision"],"changes":[change]}));
         assert_eq!(result["error"]["code"], "invalid_request", "{result}");
@@ -177,6 +190,71 @@ fn rejects_unsafe_wire_and_distinguishes_silence_from_omission() {
             .is_none()
     );
     assert_eq!(test.hardware.0.lock().unwrap().reads, reads);
+}
+
+#[test]
+fn input_switches_follow_physical_state_and_require_the_active_module_feature() {
+    let mut test = Test::new();
+    let state = test.state();
+    assert_eq!(state["capabilities"]["switch_readback"], true);
+    assert_eq!(state["capabilities"]["input_switches"], false);
+    let enabled = !state["state"]["inputs"]["inst1"].as_bool().unwrap();
+    let params = |state: &Value| {
+        json!({"device_id":state["device_id"],"generation":state["generation"],
+        "expected_revision":state["revision"],"changes":[{"kind":"input_switch","target":"inst1","enabled":enabled}]})
+    };
+    let rejected = test.call("plan_changes", params(&state));
+    assert_eq!(rejected["error"]["code"], "unsupported_capability");
+    assert_eq!(test.hardware.0.lock().unwrap().writes, 0);
+    test.hardware.0.lock().unwrap().input_switches = true;
+    let state = test.state();
+    assert_eq!(state["capabilities"]["input_switches"], true);
+    let before = test.hardware.0.lock().unwrap().state.clone();
+    let plan = test.call("plan_changes", params(&state));
+    assert_eq!(
+        plan["result"]["predicted_state"]["inputs"]["inst1"],
+        enabled
+    );
+    let accepted = test.call(
+        "apply_plan",
+        json!({"plan_id":plan["result"]["plan_id"],"idempotency_key":"input-1"}),
+    );
+    assert!(accepted.get("error").is_none(), "{accepted}");
+    test.coordinator.execute_next();
+    let mut expected = before.clone();
+    expected.set_word(0, (before.word(0) & !1) | u16::from(enabled));
+    assert_eq!(test.hardware.0.lock().unwrap().state, expected);
+    assert_eq!(test.hardware.0.lock().unwrap().writes, 1);
+
+    // Physical changes are authoritative and do not generate control writes.
+    test.call(
+        "subscribe",
+        json!({"events":["state_changed","capabilities_changed"]}),
+    );
+    test.coordinator.pending_events.clear();
+    test.hardware.0.lock().unwrap().state = before.clone();
+    test.coordinator.refresh().unwrap();
+    assert!(
+        test.coordinator
+            .pending_events
+            .iter()
+            .any(|(_, event)| event["event"] == "state_changed"
+                && event["data"]["state"]["inputs"]["inst1"] == !enabled)
+    );
+    assert_eq!(test.hardware.0.lock().unwrap().writes, 1);
+
+    // A module downgrade invalidates proposals before admission or dispatch.
+    let state = test.state();
+    let plan = test.call("plan_changes", params(&state));
+    test.hardware.0.lock().unwrap().input_switches = false;
+    let rejected = test.call(
+        "apply_plan",
+        json!({"plan_id":plan["result"]["plan_id"],"idempotency_key":"input-2"}),
+    );
+    assert!(rejected.get("error").is_some(), "{rejected}");
+    test.coordinator.execute_next();
+    assert_eq!(test.hardware.0.lock().unwrap().writes, 1);
+    assert_eq!(test.hardware.0.lock().unwrap().state, before);
 }
 #[test]
 fn external_full_state_changes_reject_without_dispatch() {
@@ -405,7 +483,20 @@ fn canonical_wire_fixture_matches_the_implemented_service() {
     test.sample(&live_id, 2, json!(-6), true);
     test.coordinator.execute_next();
     let live_finished = test.call("get_operation", json!({"operation_id":live_id}));
+    test.hardware.0.lock().unwrap().input_switches = true;
+    let input_state = test.state();
+    let input_plan = test.call("plan_changes",json!({"device_id":input_state["device_id"],"generation":input_state["generation"],"expected_revision":input_state["revision"],"changes":[{"kind":"input_switch","target":"inst1","enabled":!input_state["state"]["inputs"]["inst1"].as_bool().unwrap()}]}));
+    let input_accepted = test.call(
+        "apply_plan",
+        json!({"plan_id":input_plan["result"]["plan_id"],"idempotency_key":"fixture-input"}),
+    );
+    test.coordinator.execute_next();
+    let input_finished = test.call("get_operation", json!({"idempotency_key":"fixture-input"}));
     let mut fixture = json!({"live_begin":{"api":1,"id":"test-request","result":live_begin},"live_accepted":live_accepted,"live_updated":live_updated,"live_finished":live_finished,"fixture_version":1,"hello":test.hello,"state":{"api":1,"id":"test-request","result":state},"plan":plan,"accepted":accepted,"finished":finished,"error":error});
+    fixture["input_state"] = json!({"api":1,"id":"test-request","result":input_state});
+    fixture["input_plan"] = input_plan;
+    fixture["input_accepted"] = input_accepted;
+    fixture["input_finished"] = input_finished;
     normalize(&mut fixture);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/contract/v1.json");
     if std::env::var_os("MF_SERVICE_UPDATE_FIXTURES").is_some() {

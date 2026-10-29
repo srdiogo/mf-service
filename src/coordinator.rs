@@ -4,7 +4,7 @@ use crate::{
     protocol::{self, ApiError, Result},
     storage::{self, Paths},
 };
-use mf_core::{Model, Plan, State};
+use mf_core::{Capabilities, Model, ModuleCapabilities, Plan, State};
 use serde_json::{Value, json};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
@@ -33,6 +33,23 @@ struct DeviceState {
     revision: String,
     state: Option<State>,
     error: Option<ApiError>,
+    module: ModuleCapabilities,
+}
+impl DeviceState {
+    fn capabilities(&self) -> Capabilities {
+        let mut capabilities = self.descriptor.model.capabilities();
+        capabilities.input_switches &= self.state.is_some() && self.module.input_switches;
+        capabilities
+    }
+    fn validate_plan(&self, plan: &Plan) -> Result<()> {
+        if plan.requires_input_switches() && !self.capabilities().input_switches {
+            return Err(ApiError::new(
+                "unsupported_capability",
+                "The active module does not support verified input-switch transactions",
+            ));
+        }
+        Ok(())
+    }
 }
 
 struct Proposal {
@@ -210,7 +227,7 @@ impl<H: Hardware> Coordinator<H> {
         }
     }
     fn inventory(&self) -> Value {
-        Value::Array(self.devices.iter().map(|d|json!({"device_id":d.id,"generation":d.generation,"model":d.descriptor.model.name(),"product_id":d.descriptor.device.product_id,"connection":if d.state.is_some(){"ready"}else{"unavailable"},"capabilities":d.descriptor.model.capabilities(),"error":d.error.as_ref().map(ApiError::value)})).collect())
+        Value::Array(self.devices.iter().map(|d|json!({"device_id":d.id,"generation":d.generation,"model":d.descriptor.model.name(),"product_id":d.descriptor.device.product_id,"connection":if d.state.is_some(){"ready"}else{"unavailable"},"capabilities":d.capabilities(),"error":d.error.as_ref().map(ApiError::value)})).collect())
     }
     fn state_value(&self, index: usize) -> Result<Value> {
         let d = &self.devices[index];
@@ -220,7 +237,7 @@ impl<H: Hardware> Coordinator<H> {
                 .unwrap_or_else(|| ApiError::new("device_unavailable", "Refresh device status"))
         })?;
         Ok(
-            json!({"device_id":d.id,"generation":d.generation,"revision":d.revision,"state":state.decoded(),"capabilities":d.descriptor.model.capabilities()}),
+            json!({"device_id":d.id,"generation":d.generation,"revision":d.revision,"state":state.decoded(),"capabilities":d.capabilities()}),
         )
     }
     pub fn refresh(&mut self) -> Result<()> {
@@ -275,6 +292,7 @@ impl<H: Hardware> Coordinator<H> {
                     revision: storage::token(),
                     state: None,
                     error: None,
+                    module: ModuleCapabilities::default(),
                 }
             };
             self.devices.push(entry);
@@ -305,11 +323,16 @@ impl<H: Hardware> Coordinator<H> {
                     "Connect one MiniFuse 4; no interface was chosen",
                 ))
             } else {
-                self.hardware.read()
+                self.hardware.read().and_then(|(device, state)| {
+                    self.hardware
+                        .module_capabilities()
+                        .map(|module| (device, state, module))
+                })
             };
             match result {
-                Ok((device, state)) if device == self.devices[i].descriptor.device => {
+                Ok((device, state, module)) if device == self.devices[i].descriptor.device => {
                     let changed = self.devices[i].state.as_ref() != Some(&state);
+                    let capabilities_changed = self.devices[i].module != module;
                     let recovered = self.devices[i].error.is_some();
                     if recovered {
                         let id = self.devices[i].id.clone();
@@ -319,9 +342,14 @@ impl<H: Hardware> Coordinator<H> {
                     let d = &mut self.devices[i];
                     d.error = None;
                     d.state = Some(state);
-                    if changed || recovered {
+                    d.module = module;
+                    if changed || recovered || capabilities_changed {
                         d.revision = storage::token();
                         let id = d.id.clone();
+                        if capabilities_changed {
+                            self.plans.retain(|_, p| p.device_id != id);
+                            self.emit("capabilities_changed",Some(&id),json!({"device_id":id,"available":true,"capabilities":self.devices[i].capabilities()}));
+                        }
                         self.emit("state_changed", Some(&id), self.state_value(i)?);
                     }
                 }
@@ -375,6 +403,7 @@ impl<H: Hardware> Coordinator<H> {
         Ok(())
     }
     fn propose(&mut self, owner: &str, index: usize, plan: Plan) -> Result<Value> {
+        self.devices[index].validate_plan(&plan)?;
         self.plans.retain(|_, p| p.expires > Instant::now());
         if self.plans.len() >= MAX_PLANS
             || self.plans.values().filter(|p| p.owner == owner).count() >= 8
@@ -675,6 +704,7 @@ impl<H: Hardware> Coordinator<H> {
         })?;
         let i = self.identity(&proposal.device_id, &proposal.generation)?;
         self.revision(i, &proposal.revision)?;
+        self.devices[i].validate_plan(&proposal.plan)?;
         if self.operations.len() >= MAX_OPERATIONS || self.work.len() >= 32 {
             return Err(ApiError::new(
                 "queue_full",
@@ -721,7 +751,8 @@ impl<H: Hardware> Coordinator<H> {
         );
         let ready = self.refresh().and_then(|()| {
             let index = self.identity(&proposal.device_id, &proposal.generation)?;
-            self.revision(index, &proposal.revision)
+            self.revision(index, &proposal.revision)?;
+            self.devices[index].validate_plan(&proposal.plan)
         });
         let outcome = ready.and_then(|()| {
             self.hardware
