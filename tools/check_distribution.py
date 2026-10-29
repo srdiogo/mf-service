@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Exercise staged install/removal and unit parsing without starting services."""
+"""Exercise staging, unit parsing and isolated process shutdown without integration."""
 
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 
 from render_unit import render
 
@@ -36,6 +37,39 @@ def main():
             env=dict(os.environ, XDG_RUNTIME_DIR=str(runtime)),
             check=True,
         )
+        isolated = dict(
+            os.environ,
+            XDG_RUNTIME_DIR=str(runtime),
+            XDG_STATE_HOME=str(root / "state"),
+            XDG_DATA_HOME=str(root / "data"),
+        )
+        process = subprocess.Popen(
+            [str(binary)],
+            cwd=root,
+            env=isolated,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        endpoint = runtime / "mf-service/control.sock"
+        try:
+            deadline = time.monotonic() + 2
+            while (
+                not endpoint.exists()
+                and process.poll() is None
+                and time.monotonic() < deadline
+            ):
+                time.sleep(0.01)
+            assert endpoint.exists(), (
+                "Isolated package instance did not create its socket"
+            )
+            process.terminate()
+            assert process.wait(timeout=5) == 0
+            assert not endpoint.exists(), "SIGTERM left a stale socket"
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=2)
+            process.communicate()
         sentinel = prefix / "bin/unrelated-file"
         sentinel.write_text("keep")
         subprocess.run(["make", "uninstall", f"PREFIX={prefix}"], cwd=ROOT, check=True)
@@ -50,7 +84,9 @@ def main():
                 raise AssertionError("Invalid executable path accepted")
         escaped = render("/opt/MiniFuse $test%/bin/mf-service")
         assert "$$test%%" in escaped
-    print("Staged install, unit validation and removal passed; no service was started.")
+    print(
+        "Staging, unit parsing, isolated SIGTERM cleanup and removal passed; no startup was enabled."
+    )
 
 
 if __name__ == "__main__":

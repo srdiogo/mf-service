@@ -12,8 +12,8 @@ readback, visual confirmation and measured audio. Share synthetic fixtures or
 anonymous measurements rather than private snapshots, serials or microphone PCM.
 
 Run `make check`, `make build` and `make check-distribution`. The distribution
-check stages and removes files in a temporary directory and never starts a
-service. Hardware validation is separate and must preserve the full initial
+check stages/removes files and verifies SIGTERM cleanup of an isolated process
+with private temporary XDG directories; it never enables session integration. Hardware validation is separate and must preserve the full initial
 state. MF1/MF2 support requires model-specific evidence rather than MF4 guesses.
 
 Firmware modification, effects, raw request interfaces and automatic preset

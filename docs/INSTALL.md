@@ -71,5 +71,7 @@ The upstream v0.2.6 package does not provide these MF4 input/meter extensions.
 
 `make check-distribution` tests installation under a temporary absolute prefix
 containing spaces, parses the user unit with systemd, checks installed help and
-removes only project-owned files. It does not start a service or alter devices.
+removes only project-owned files. It also verifies socket cleanup after SIGTERM
+of an isolated process with temporary XDG directories, without enabling session
+integration or changing device configuration.
 A clean-machine build/session check remains distinct from staged validation.
