@@ -17,8 +17,8 @@ fn main() -> std::io::Result<()> {
         return Ok(());
     }
     unsafe {
-        libc::signal(libc::SIGTERM, stop as libc::sighandler_t);
-        libc::signal(libc::SIGINT, stop as libc::sighandler_t);
+        libc::signal(libc::SIGTERM, stop as *const () as libc::sighandler_t);
+        libc::signal(libc::SIGINT, stop as *const () as libc::sighandler_t);
     }
     let coordinator = Coordinator::new(Linux, Paths::environment()?)?;
     server::run(&server::runtime_directory()?, coordinator, &STOP)
