@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-28",
+  "usb_vid": "1c75",
+  "usb_pid": "af70",
+  "unit_count": 1,
+  "sample_rate_hz": 48000,
+  "analysis_window_seconds": 0.5,
+  "gain_tolerance_db": 0.15,
+  "suppression_acceptance_db": -60,
+  "mixes": [
+    {
+      "mix": "out12",
+      "source_minus_6_db": -5.999994598347207,
+      "source_other_channel_delta_db": 0.0,
+      "center_pan_db": [
+        -3.0078066540977244,
+        -3.0078062744284244
+      ],
+      "master_minus_6_db": [
+        -5.999997420912684,
+        -5.999997612596848
+      ],
+      "usb_direct_delta_from_reference_db": [
+        4.198795855426198e-06,
+        4.205972103091293e-06
+      ],
+      "custom_minus_12_db_unmuted_carrier": -11.99999764753828,
+      "suppression_below_minus_60_db": {
+        "pan_extreme_response": true,
+        "mute_response": true,
+        "solo_response": true,
+        "custom_route_response": true,
+        "source_removal_response": true
+      },
+      "source_membership_readback_verified": true,
+      "source_membership_audio_flag_isolated": false,
+      "all_190_bytes_restored": true
+    },
+    {
+      "mix": "out34",
+      "source_minus_6_db": -5.999957671208408,
+      "source_other_channel_delta_db": 0.0,
+      "center_pan_db": [
+        -3.0078225603663293,
+        -3.0078046598670474
+      ],
+      "master_minus_6_db": [
+        -5.999982851349098,
+        -5.999996801483743
+      ],
+      "usb_direct_delta_from_reference_db": [
+        1.9375674429088643e-05,
+        6.623937310482893e-06
+      ],
+      "custom_minus_12_db_unmuted_carrier": -11.99999238962539,
+      "suppression_below_minus_60_db": {
+        "pan_extreme_response": true,
+        "mute_response": true,
+        "solo_response": true,
+        "custom_route_response": true
+      },
+      "source_membership_readback_verified": true,
+      "source_membership_audio_flag_isolated": false,
+      "all_190_bytes_restored": true
+    },
+    {
+      "mix": "loopback",
+      "source_minus_6_db": -5.999957671208408,
+      "source_other_channel_delta_db": 0.0,
+      "center_pan_db": [
+        -3.0078225603663293,
+        -3.0078046598670474
+      ],
+      "master_minus_6_db": [
+        -5.999982851349098,
+        -5.999996801483743
+      ],
+      "usb_direct_delta_from_reference_db": [
+        1.9375674429088643e-05,
+        6.623937310482893e-06
+      ],
+      "custom_minus_12_db_unmuted_carrier": -11.99999238962539,
+      "suppression_below_minus_60_db": {
+        "pan_extreme_response": true,
+        "mute_response": true,
+        "solo_response": true,
+        "custom_route_response": true,
+        "source_removal_response": true
+      },
+      "source_membership_readback_verified": true,
+      "source_membership_audio_flag_isolated": false,
+      "all_190_bytes_restored": true
+    }
+  ],
+  "kernel_rejections": [
+    {
+      "test": "readonly_fd_refuses_apply",
+      "errno": 13,
+      "state_unchanged": true
+    },
+    {
+      "test": "unvalidated_stereo_refused",
+      "errno": 95,
+      "state_unchanged": true
+    },
+    {
+      "test": "unsupported_channel_refused",
+      "errno": 22,
+      "state_unchanged": true
+    },
+    {
+      "test": "invalid_master_refused",
+      "errno": 34,
+      "state_unchanged": true
+    },
+    {
+      "test": "invalid_route_refused",
+      "errno": 22,
+      "state_unchanged": true
+    },
+    {
+      "test": "duplicate_selectors_refused",
+      "errno": 22,
+      "state_unchanged": true
+    },
+    {
+      "test": "excess_count_refused",
+      "errno": 22,
+      "state_unchanged": true
+    },
+    {
+      "test": "stale_device_identity_refused",
+      "errno": 116,
+      "state_unchanged": true
+    },
+    {
+      "test": "stale_expected_state_refused",
+      "errno": 11,
+      "state_unchanged": true
+    }
+  ],
+  "snapshot_restore": {
+    "changed_gain_words": 20,
+    "transaction_count": 1,
+    "verified": true,
+    "all_190_bytes_restored": true
+  },
+  "streaming": {
+    "tone_seconds": 8,
+    "analysis_window_ms": 20,
+    "analyzed_windows": 374,
+    "reference_tone_gap_windows": 0,
+    "muted_test_channel_windows": 101,
+    "capture_stderr_empty": true,
+    "formal_latency_or_dropout_benchmark": false,
+    "all_control_events_stream_running": true,
+    "control_event_seconds": [
+      2.0376660360016103,
+      4.07367460200112
+    ]
+  },
+  "legacy_toggles": {
+    "phantom_already_on_idempotent": true,
+    "phantom_off_on_cycle_tested": false,
+    "inst1_inst2_only_header_byte_zero_changed": true,
+    "human_led_confirmation": null
+  },
+  "microphone": {
+    "source_level_db": -18,
+    "master_db": -12,
+    "seconds_on": 60,
+    "voice_audio_saved": false,
+    "on_one_second_windows": 59,
+    "maximum_on_peak_dbfs": -80.78103207305799,
+    "last_two_muted_windows_digital_zero": true,
+    "human_listening_confirmation": null,
+    "spoken_voice_validated": false
+  },
+  "cleanup": {
+    "all_190_bytes_restored": true,
+    "driver_bindings_restored": true,
+    "module_unloaded": true,
+    "device_node_removed": true
+  },
+  "source_commit": "e3315ad3f3df9d00125bb2d44c374b3757210622",
+  "source_scope": "CLI and kernel sources; measured artifact hashes are recorded in the companion report."
+}

@@ -1,7 +1,7 @@
 # Contributing
 
-Keep protocol/model work in [mf-core](https://github.com/srdiogo/mf-cli), service
-coordination and API work here, and presentation in
+Keep protocol/model work in `crates/mf-core`, service coordination and API work
+in `crates/mf-service`, Linux transport work in `kmod`, and presentation in
 [MiniFuse Control](https://github.com/srdiogo/minifuse-control). The API contract
 is [docs/IPC.md](docs/IPC.md). Client fixtures pin a producer commit and SHA-256.
 
@@ -18,3 +18,7 @@ state. MF1/MF2 support requires model-specific evidence rather than MF4 guesses.
 
 Firmware modification, effects, raw request interfaces and automatic preset
 replay are outside this project's scope. Installing a unit never enables it.
+
+Run `make check-driver KDIR=/path/to/kernel/build` for driver changes. This
+builds without loading the module. Use `make arch-source` to export a clean,
+pinned package source kit; see [packaging](packaging/arch/README.md).
