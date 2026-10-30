@@ -3,7 +3,8 @@
 On 29 October 2026, service revision
 `8373de87cc5aa768ab83666f5f662021800e0c4e` and GUI revision
 `5bdbe44ab5b87e0bd0d96513743f0adf2847b2d2` were exercised on one MiniFuse 4.
-The core dependency and module protocol are pinned in Cargo.toml/Cargo.lock.
+The core and module protocol are versioned in this workspace. Historical
+hardware observations remain tied to the source revisions cited below.
 The module was loaded temporarily; no startup service or persistent audio
 configuration was installed.
 

@@ -10,14 +10,17 @@ jobs:
         toolchain: ['1.85.1', stable]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
-      - run: cargo fmt --all --check
-      - run: cargo test --locked
-      - run: cargo clippy --all-targets --locked -- -D warnings
-      - run: cargo build --release --locked
+      - run: make check
+      - run: make check-tools
+      - run: sha256sum -c docs/mf4/SHA256SUMS
+      - run: make build
       - run: make check-distribution
       - run: make install DESTDIR="$RUNNER_TEMP/package"
       - run: tar -C "$RUNNER_TEMP/package" -czf mf-service-linux-x86_64-preview.tar.gz .
@@ -27,20 +30,41 @@ jobs:
           name: mf-service-linux-x86_64-preview
           path: mf-service-linux-x86_64-preview.tar.gz
 
+  kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y linux-headers-generic
+      - name: Build only; never load the module
+        run: |
+          for kdir in /usr/src/linux-headers-*-generic; do
+            make check-driver KDIR="$kdir"
+          done
+
   arch-package:
     runs-on: ubuntu-latest
     container: archlinux:base
     steps:
-      - run: pacman -Syu --noconfirm base-devel git rust python systemd
+      - run: pacman -Syu --noconfirm base-devel git rust python systemd dkms
       - uses: actions/checkout@v4
-      - name: Build pinned package as an unprivileged user
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Export and build this commit without loading the driver
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python tools/prepare_arch_package.py --output /tmp/package
           useradd --create-home builder
-          install -d -o builder -g builder /tmp/package
-          cp packaging/arch/PKGBUILD /tmp/package/PKGBUILD
-          chown builder:builder /tmp/package/PKGBUILD
-          runuser -u builder -- sh -c 'cd /tmp/package && makepkg --cleanbuild --noconfirm'
+          chown -R builder:builder /tmp/package
+          runuser -u builder -- sh -c 'cd /tmp/package && sha256sum -c SHA256SUMS && makepkg --cleanbuild --noconfirm'
+          cd /tmp/package
+          sha256sum ./*.pkg.tar.zst > PACKAGE-SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: mf-service-arch-preview
-          path: /tmp/package/*.pkg.tar.zst
+          name: minifuse-backend-arch-preview
+          path: |
+            /tmp/package/*.pkg.tar.zst
+            /tmp/package/PKGBUILD
+            /tmp/package/*.tar.gz
+            /tmp/package/source-lock.json
+            /tmp/package/*SHA256SUMS

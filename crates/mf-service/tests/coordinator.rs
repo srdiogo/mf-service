@@ -530,7 +530,7 @@ fn canonical_wire_fixture_matches_the_implemented_service() {
     fixture["meter_state"] = json!({"api":1,"id":"test-request","result":meter_state});
     fixture["meters"] = test.coordinator.pending_events[0].1.clone();
     normalize(&mut fixture);
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/contract/v1.json");
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/contract/v1.json");
     if std::env::var_os("MF_SERVICE_UPDATE_FIXTURES").is_some() {
         fs::write(
             &path,

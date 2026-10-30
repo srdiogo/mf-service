@@ -2,10 +2,10 @@
 """Exercise staging, unit parsing and isolated process shutdown without integration."""
 
 import os
-from pathlib import Path
 import subprocess
 import tempfile
 import time
+from pathlib import Path
 
 from render_unit import render
 
@@ -18,6 +18,12 @@ def main():
         prefix = root / "prefix with spaces"
         subprocess.run(["make", "install", f"PREFIX={prefix}"], cwd=ROOT, check=True)
         binary = prefix / "bin/mf-service"
+        doctor = prefix / "bin/minifuse-doctor"
+        core_license = prefix / "share/licenses/mf-service/core-LICENSE"
+        assert (
+            core_license.read_bytes() == (ROOT / "crates/mf-core/LICENSE").read_bytes()
+        )
+        subprocess.run([str(doctor), "--help"], check=True, capture_output=True)
         unit = prefix / "lib/systemd/user/mf-service.service"
         subprocess.run([str(binary), "--help"], check=True, capture_output=True)
         assert f'ExecStart="{binary}"' in unit.read_text()
@@ -75,6 +81,7 @@ def main():
         subprocess.run(["make", "uninstall", f"PREFIX={prefix}"], cwd=ROOT, check=True)
         assert sentinel.read_text() == "keep"
         assert not binary.exists() and not unit.exists()
+        assert not doctor.exists() and not core_license.exists()
         for invalid in ("relative/bin/mf-service", "/usr/bin/bad\nname"):
             try:
                 render(invalid)

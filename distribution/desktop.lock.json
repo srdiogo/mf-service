@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "api_major": 1,
+  "gui": {
+    "repository": "https://github.com/srdiogo/minifuse-control",
+    "commit": "24815101f689b909f5228074395ecb5dd671450b",
+    "archive_sha256": "4f040e1be5c94197e5bd436c7b30dd1d74be778376af426a8e114c8804fdb59a",
+    "recipe_commit": "5e50d8f652ef17884d3c9bf93e05b59758b2c3cb",
+    "recipe_sha256": "370a9471efb8cf3973ba409f411e88867f8b7b2dc02ce247722abef1daaf67b7"
+  },
+  "plugin": {
+    "id": "srdiogo.minifuse",
+    "repository": "https://github.com/srdiogo/omarchy-minifuse",
+    "commit": "3cc6116680a50794c933f930b4e498623c01c0cc",
+    "archive_sha256": "e0c381ee6c9a6e95b89977caee0e409df1d5b310aa18d68bc6630d26a5f75c58"
+  },
+  "desktop_reference": {
+    "omarchy": "4.0.4-1",
+    "omarchy_commit": "c668141e9c42b13c80c9ca4ea108e11708c5e8a5",
+    "quickshell": "0.3.1",
+    "qt": "6.11.2",
+    "python": ">=3.12,<3.15"
+  }
+}

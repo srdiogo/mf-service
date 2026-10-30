@@ -1,6 +1,8 @@
 # mf-service
 
-A Rust user-session service for the [MiniFuse Linux control platform](https://github.com/srdiogo/mf-cli). It gives
+The backend for the MiniFuse Linux control platform. This repository contains
+the `mf-core` Rust library, the `mf-service` user-session process and the Linux
+control driver. It gives
 the standalone application and Omarchy plugin one capability-driven view of
 device state and a serialized, verified operation path through `mf-core`.
 
@@ -12,15 +14,16 @@ does not enable a unit or desktop startup.
 
 ## Build and run
 
-Requires Linux, Rust 1.85+ and the exact core revision in `Cargo.toml`/`Cargo.lock`.
+Requires Linux, Rust 1.85+, a C compiler for ABI tests and the committed
+`Cargo.lock`. Both Rust crates are built from this workspace.
 The service uses Rust's Unix sockets/threads, Serde, serde_json and libc; Qt and
 libusb are not runtime dependencies. Normal control requires the matching
 administrator-installed MiniFuse module and existing session access.
 
 ```sh
 cargo build --release --locked
-cargo test --locked
-cargo clippy --all-targets --locked -- -D warnings
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 ./target/release/mf-service --help
 ./target/release/mf-service
 ```
@@ -30,10 +33,25 @@ The server uses `$XDG_RUNTIME_DIR/mf-service/control.sock` (0700 directory,
 falls back to a shared `/tmp` socket, starts as root, loads a module, detaches an
 audio driver or restores a preset automatically. Use Ctrl+C to stop it.
 
-The service currently pins `mf-core` commit
-`936962fcef9320fbf0e0991bd095d9c6c9370dc4`. The initial shared core was integrated by
-[the shared-core PR](https://github.com/srdiogo/mf-cli/pull/2). USB semantics,
-gain conversion, snapshot restore and rollback have one implementation there.
+## Components and installation
+
+| Component | Role | Runtime |
+|---|---|---|
+| `crates/mf-core` | Typed state, capability gates, planning, verified transport and host snapshots | Compiled into the service |
+| `crates/mf-service` | Shared API, serialization, subscriptions and durable operation identities | One process per user session |
+| `kmod` | Bounded Linux control transport; keeps `snd-usb-audio` bound | `minifuse_mod` kernel module |
+| [MiniFuse Control](https://github.com/srdiogo/minifuse-control) | Full mixer application | Optional separate project |
+| [Omarchy MiniFuse](https://github.com/srdiogo/omarchy-minifuse) | Bar widget and compact mixer | Optional separate project |
+
+The CLI is not required to build, install or run this backend. The core is a
+library, not another background service. GUI and plugin share the same service.
+The wire protocol remains API v1 and existing snapshots retain schema 1.
+
+Arch/Omarchy packages are `minifuse-driver-dkms` and `mf-service`. Driver setup
+requires matching kernel headers and administrator access; normal control runs
+as the logged-in user. See [installation from a clean machine](docs/INSTALL.md),
+[package builds](packaging/arch/README.md), [the complete kit installer](distribution/INSTALLER.md)
+and the read-only `minifuse-doctor`.
 
 ## API and storage
 
@@ -41,6 +59,7 @@ gain conversion, snapshot restore and rollback have one implementation there.
 - [Architecture, bounds and lifecycle](docs/ARCHITECTURE.md)
 - [Implementation status and validation](docs/IMPLEMENTATION.md)
 - [Installation and troubleshooting](docs/INSTALL.md)
+- [Operator-confirmed installation and reboot validation](docs/INSTALLATION_VALIDATION.md)
 - [Hardware integration validation](docs/MF4_VALIDATION.md)
 - [Contribution workflow](CONTRIBUTING.md)
 - [Canonical service/client fixtures](tests/contract/README.md)
@@ -61,7 +80,9 @@ Snapshots are host files. Readback does not confirm nonvolatile saving.
 Effects, firmware/device-storage writes, raw USB/selectors and host audio
 configuration changes are outside scope. This is an independent community
 project. New material is [MIT licensed](LICENSE); upstream/protocol research
-credits remain in the `mf-cli` evidence record.
+credits are preserved in [the evidence record](docs/mf4/evidence.md) and
+[third-party notices](THIRD_PARTY.md). The kernel code is GPL-2.0-only; see
+[kmod/LICENSE](kmod/LICENSE).
 
 MF4 input switch state is read from the validated B2 fields. Typed INST1,
 INST2 and shared phantom-power changes use the same durable plan/apply path
@@ -76,4 +97,4 @@ from physical output levels when USB direct bypasses the custom mix.
 
 The standalone [MiniFuse Control GUI](https://github.com/srdiogo/minifuse-control)
 is a separate project. Clients share this service; protocol and kernel changes
-belong in [mf-core](https://github.com/srdiogo/mf-cli).
+belong in this workspace.

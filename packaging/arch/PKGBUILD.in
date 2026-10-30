@@ -1,0 +1,62 @@
+# Maintainer: Diogo de Medeiros <sr.diogo@gmail.com>
+pkgbase=mf-service
+pkgname=('mf-service' 'minifuse-driver-dkms')
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='MiniFuse Linux control backend'
+arch=('x86_64')
+url='https://github.com/srdiogo/mf-service'
+license=('MIT')
+makedepends=('rust>=1.85' 'python' 'systemd')
+checkdepends=('gcc')
+options=('!debug')
+_commit=@COMMIT@
+source=("mf-service-$_commit.tar.gz")
+sha256sums=('@SHA256@')
+
+prepare() {
+  cd "mf-service-$_commit"
+  cargo fetch --locked --target x86_64-unknown-linux-gnu
+}
+
+build() {
+  cd "mf-service-$_commit"
+  cargo build --workspace --release --frozen
+}
+
+check() {
+  cd "mf-service-$_commit"
+  cargo test --workspace --frozen
+  make check-distribution
+  sha256sum -c docs/mf4/SHA256SUMS
+}
+
+package_mf-service() {
+  pkgdesc='MiniFuse session API with the shared control core compiled in'
+  depends=('glibc' 'libgcc' 'minifuse-transport=1')
+  optdepends=('python>=3.12: read-only minifuse-doctor diagnostics')
+  cd "mf-service-$_commit"
+  make install DESTDIR="$pkgdir"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 docs/INSTALL.md "$pkgdir/usr/share/doc/$pkgname/INSTALL.md"
+  install -Dm644 THIRD_PARTY.md "$pkgdir/usr/share/doc/$pkgname/THIRD_PARTY.md"
+}
+
+package_minifuse-driver-dkms() {
+  pkgdesc='MiniFuse control driver and active-session access policy'
+  arch=('any')
+  license=('GPL-2.0-only')
+  depends=('dkms')
+  provides=('minifuse-transport=1')
+  conflicts=('mf-cli-platform')
+  cd "mf-service-$_commit"
+  local dkms_dir="$pkgdir/usr/src/minifuse_mod-$pkgver" file
+  for file in minifuse_mod.c mf4_protocol.h Makefile dkms.conf; do
+    install -Dm644 "kmod/$file" "$dkms_dir/$file"
+  done
+  sed -i "s/^PACKAGE_VERSION=.*/PACKAGE_VERSION=\"$pkgver\"/" "$dkms_dir/dkms.conf"
+  install -Dm644 packaging/70-minifuse.rules "$pkgdir/usr/lib/udev/rules.d/70-minifuse.rules"
+  install -Dm644 kmod/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 THIRD_PARTY.md "$pkgdir/usr/share/doc/$pkgname/THIRD_PARTY.md"
+  install -Dm644 packaging/minifuse.conf.example "$pkgdir/usr/share/doc/$pkgname/minifuse.conf.example"
+}

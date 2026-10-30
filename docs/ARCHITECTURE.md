@@ -4,6 +4,11 @@ Status: implemented development architecture; hardware/release gates remain open
 
 ## Process model
 
+The library and service are separate Cargo crates in one workspace. The
+library is linked into the service; this creates no additional process, IPC hop
+or polling loop. The Linux transport is versioned in the same repository.
+The CLI is an independent optional consumer, not an installation prerequisite.
+
 One service runs per user session. A socket acceptor/API task validates and
 dispatches requests; a dedicated blocking worker performs discovery, state
 reads, journal sync and hardware execution. USB calls never block a GUI event
@@ -17,7 +22,8 @@ or a claim of serial-bound identity.
 Source ownership (coordination/discovery/outcomes currently share one module):
 
 ```text
-src/
+crates/mf-core/      synchronous library; no daemon or desktop dependencies
+crates/mf-service/src/
   main.rs             foreground lifecycle and signal handling
   server.rs           socket admission, framing deadlines and bounded writers
   protocol.rs         strict envelopes, domain DTOs and error codes
@@ -25,11 +31,12 @@ src/
   live.rs             fixed-target gestures, sample intents and settlement
   hardware.rs         descriptor discovery and real mf-core adapter
   storage.rs          exclusive private records and atomic finalization
-tests/
+crates/mf-service/tests/
   coordinator.rs      fake hardware, invariants and canonical fixture check
   server.rs           real local sockets, framing, deadlines and backpressure
-  contract/v1.json    shared service/client contract fixture
-packaging/            optional user unit; never auto-installed
+tests/contract/v1.json  shared service/client contract fixture
+kmod/                bounded GPL-2.0-only Linux control transport
+packaging/           native driver/service packages and optional user unit
 ```
 
 ## Socket and local access

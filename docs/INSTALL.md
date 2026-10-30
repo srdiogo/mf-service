@@ -1,77 +1,195 @@
-# Installation and operation
+# Installation, operation and removal
 
-Build the locked release, review the files, and stage a package without changing
-the current session:
+The backend is one source workspace and two native packages: `mf-service`
+(including the compiled core) and `minifuse-driver-dkms` (control driver and
+session access policy). Neither the CLI nor libusb is required. MiniFuse Control
+and the Omarchy plugin are optional separate applications.
+
+This is a development preview. The packaged target is Arch Linux x86_64 and the
+recorded desktop baseline is Omarchy 4.0.4, Quickshell 0.3.1 and Qt 6.11.2.
+MiniFuse 4 has bounded hardware validation. MF1/MF2 may appear in inventory but
+receive no inferred MF4 mixer, switch or meter layout. A new kernel, host or
+device combination still needs its own acceptance check.
+
+## Complete kit installer
+
+A prepared installation kit includes `install.sh`. Run it as the graphical user,
+without sudo, to verify the kit and review the full installation plan. Use
+`./install.sh --dry-run` for checks only. The entrypoint handles distribution
+prerequisites, matching headers, native packages, optional startup, the GUI,
+the pinned Omarchy panel and its floating-window policy. See
+[installer profiles and recovery](../distribution/INSTALLER.md).
+
+The following sections describe the same setup manually and from source.
+
+## 1. Prepare the new machine
+
+Use a normal graphical login session. Install development dependencies through
+the distribution package manager, including the **headers for the kernel that
+will run the driver**. For example, `linux-headers` matches the `linux` kernel;
+it is not a replacement for a custom Omarchy kernel's matching header package.
+After a kernel update, reboot into the matching installed kernel before testing.
+
+Build requirements are `base-devel`, Rust 1.85+, Git, Python 3.12+ and systemd.
+The driver requires DKMS. On Arch, review and install the prerequisites:
 
 ```sh
-cargo build --release --locked
-make check-distribution
-make install DESTDIR=/tmp/mf-service-package
+sudo pacman -S --needed base-devel rust git python systemd dkms
 ```
 
-The package contains the executable, license and optional user unit. It does
-not include or install the kernel module/udev policy. Use the separately reviewed
-`mf-cli` package for those prerequisites. Normal operation never needs elevation.
-The unit is rendered with the installed executable path (`/usr/bin/mf-service`
-for the distribution package). Custom absolute prefixes are supported; `DESTDIR`
-is a staging root and is never included in ExecStart.
+Install the appropriate kernel-header package separately. Confirm that
+`/usr/lib/modules/$(uname -r)/build/Makefile` exists. DKMS also needs the compiler
+and linker used by that kernel; Clang-built kernels need the matching LLVM tools.
+Do not replace kernel packages or downgrade the desktop to match this preview.
 
-For development, run `./target/release/mf-service` in a terminal. Runtime access
-requires the login session's owned, private `XDG_RUNTIME_DIR`; no shared socket
-fallback is offered. Standard XDG state/data locations may be overridden before
-startup. Existing private service directories must be owned by the user with
-mode 0700. Snapshot/preset/identity files are exclusive mode-0600 files.
+## 2. Build and install the backend
 
-Installing unit files does not enable them. After reviewing and installing a
-package, optional login startup is a deliberate user choice:
+Use a reviewed commit of this repository. From a clean checkout:
+
+```sh
+make check
+make build
+make check-tools
+make check-distribution
+make arch-source
+cd dist/arch
+sha256sum -c SHA256SUMS
+makepkg --cleanbuild
+```
+
+`dist/arch/source-lock.json` records the full commit and package version. Its
+source archive contains the core, service, driver, licenses, evidence and build
+scripts from that exact commit. Copy this entire directory to the new machine
+to build the same source. Cargo registry packages and distribution dependencies
+still require network access or a prepared cache; this is not an offline OS
+installer or a promise of byte-identical binaries.
+
+Review the generated packages, then install both in one transaction:
+
+```sh
+sudo pacman -U ./minifuse-driver-dkms-*.pkg.tar.zst ./mf-service-*.pkg.tar.zst
+```
+
+The package manager builds the module through DKMS. Installation does not start
+the service, restore settings or enable module loading at boot. Keep
+`snd-usb-audio` bound; no driver detach, reset or blacklist is needed.
+
+The old `mf-cli-platform` package owns the same driver and udev paths and
+conflicts with `minifuse-driver-dkms`. On a machine using it, review the package
+manager's replacement transaction: replacing that combined package also removes
+its CLI executable. The new service can instead use its compatible
+`minifuse-transport=1` provider until a deliberate driver migration. Never force
+overlapping packages or unload a running audio module to complete an upgrade.
+
+## 3. Activate the driver and session access
+
+After successful DKMS installation, explicitly load the control module and
+refresh the access policy:
+
+```sh
+sudo udevadm control --reload-rules
+sudo modprobe minifuse_mod
+sudo udevadm trigger --subsystem-match=misc --sysname-match=minifuse_cmd
+sudo udevadm settle
+```
+
+The active local seat receives access through udev's `uaccess` tag. Check
+`/dev/minifuse_cmd` from the owning login session. Do not make it world writable
+or run the service as root. If an older module is already loaded, these commands
+do not replace it; schedule a reboot into the installed driver instead of
+unloading it during playback.
+
+For optional loading on subsequent boots:
+
+```sh
+sudo install -m644 /usr/share/doc/minifuse-driver-dkms/minifuse.conf.example /etc/modules-load.d/minifuse.conf
+```
+
+Review an existing file before replacing it. This explicit step changes boot
+configuration; ordinary package installation does not.
+
+## 4. Start the user service
+
+For foreground operation, run `mf-service`. For deliberate login startup:
 
 ```sh
 systemctl --user daemon-reload
 systemctl --user enable --now mf-service.service
+minifuse-doctor
 ```
 
-Stop/disable with `systemctl --user disable --now mf-service.service`. Removal
-of the executable/unit leaves current device state and user presets/evidence
-intact. The Makefile's uninstall target removes only its three package files;
-it does not remove user data or change audio configuration.
+Run these as the normal graphical-session user. The service uses the owned
+private `$XDG_RUNTIME_DIR/mf-service/control.sock`; it never falls back to a
+shared socket. Unit startup does not change device settings. Presets are applied
+only by explicit client action, including after reconnect or login.
 
-## Diagnostics
+`minifuse-doctor` requires Python 3.12+. It checks the local installation and
+uses only `hello` and `list_devices` through the service. It does not install,
+load modules, enable units, apply presets or print device identities/settings.
+Use `--json` for a machine-readable report or `--no-service` for offline checks.
+Missing optional GUI/Omarchy tools and build headers are reported separately.
+A healthy installation report alone is not hardware acceptance.
 
-- Missing runtime directory: run inside the owning login session.
-- Second instance: connect to or stop the existing service; do not delete a
-  live instance's socket/lock. Stale owned sockets are recovered under a lock.
-- Missing/incompatible module: install the matching reviewed module through
-  normal administrator-managed packaging. There is no raw-USB fallback.
-- Access denied: check active-session ACL/group policy for `/dev/minifuse_cmd`.
-- Ambiguous device: connect one MF4; the service never chooses one implicitly.
-- Stale state/device: discard the old plan, refresh and deliberately re-plan.
-- Indeterminate operation: query using the previous client token and key. Read
-  current state and retain the service/core records for explicit reconciliation.
-  A timeout/restart is never an instruction to repeat a mutation.
-- Store full: while stopped, archive explicitly resolved records to an owned
-  private location. Never delete unresolved records to unblock a transaction.
+## 5. Choose a frontend
 
-Foreground diagnostics and the user's journal are for local troubleshooting;
-review/redact host information before sharing. No automatic diagnostic upload,
-device reset or preset application occurs during startup/reconnection.
+The pinned desktop source references are in
+[`distribution/desktop.lock.json`](../distribution/desktop.lock.json). See
+[reproduction and acceptance](REPRODUCING.md) for the exact builds and checks.
 
-## Distribution preview
+- [MiniFuse Control](https://github.com/srdiogo/minifuse-control) is the separate
+  full mixer, routing, input and preset application. Its native Arch recipe
+  installs the GUI and shared Python package; the desktop agent is optional.
+- [Omarchy MiniFuse](https://github.com/srdiogo/omarchy-minifuse) is the compact
+  panel and bar widget. After the backend works, follow its normal installation:
 
-The public source repository is <https://github.com/srdiogo/mf-service>. Preview
-CI publishes the staged Linux executable/unit/license tree as an artifact. It
-is built on the runner's distribution and is not a universal Linux binary.
-Build a native package on the target distribution for deployment.
+```sh
+omarchy plugin add https://github.com/srdiogo/omarchy-minifuse.git
+omarchy plugin enable srdiogo.minifuse
+omarchy bar move srdiogo.minifuse --section right
+```
 
-The Arch package recipe is maintained under `packaging/arch/`. It pins a complete
-source commit and archive checksum; it does not track a moving branch. Build it
-as an ordinary user with `makepkg`, review its contents, then install through
-the system package manager. Package installation leaves login startup disabled.
-The matching kernel transport is a separate administrator-managed prerequisite.
-The upstream v0.2.6 package does not provide these MF4 input/meter extensions.
+Plugin installation does not install the backend or request privileges. The
+full mixer is optional; installing it enables the panel's application launcher.
+The physical Arturia-logo button remains unavailable and needs no desktop agent.
 
-`make check-distribution` tests installation under a temporary absolute prefix
-containing spaces, parses the user unit with systemd, checks installed help and
-removes only project-owned files. It also verifies socket cleanup after SIGTERM
-of an isolated process with temporary XDG directories, without enabling session
-integration or changing device configuration.
-A clean-machine build/session check remains distinct from staged validation.
+## Removal and retained data
+
+Disable the plugin through Omarchy and remove it through the host's plugin
+manager. Remove any optional floating-window fragment only if you added it.
+Then stop login integration and remove packages deliberately:
+
+```sh
+systemctl --user disable --now mf-service.service
+sudo pacman -R mf-service minifuse-driver-dkms
+systemctl --user daemon-reload
+```
+
+Remove dependent GUI/agent packages in the same package-manager transaction if
+installed. Remove `/etc/modules-load.d/minifuse.conf` only if it is the file you
+created for this setup. DKMS/package removal does not unload the running module;
+reboot at a suitable time. No automatic device reset or preset restore occurs.
+
+Package removal retains private operation evidence in
+`$XDG_STATE_HOME/mf-service`, historical core backups in `$XDG_STATE_HOME/mf-cli`,
+and presets in `$XDG_DATA_HOME/minifuse/presets`, with normal home fallbacks.
+Keep unresolved operation records. Archive or delete user data separately only
+after reviewing it; do not erase evidence to bypass an indeterminate operation.
+
+## Development staging and diagnostics
+
+`make install DESTDIR=/tmp/mf-service-package` stages the service, doctor,
+licenses and optional user unit. It does not install the driver. `PREFIX` is the
+installed absolute prefix; `DESTDIR` never appears in the rendered unit.
+`make uninstall` removes only those staged project files and leaves user data.
+
+`make check-distribution` verifies staged installation/removal, the user unit,
+installed help and SIGTERM cleanup with isolated XDG directories. It does not
+enable integration. `make check-driver KDIR=/path/to/kernel/build` builds only;
+it never loads the module.
+
+For local diagnostics, inspect `systemctl --user status mf-service.service`,
+`journalctl --user -u mf-service.service` and `dkms status`. Review/redact logs
+before sharing. A missing module, denied control node, absent private runtime,
+multiple MF4s or stale plans have distinct failure paths. Never delete a live
+socket or replay an uncertain operation; refresh and reconcile with the original
+client token/idempotency key. Unsupported models remain unavailable in the UI.

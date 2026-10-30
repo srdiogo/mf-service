@@ -1,0 +1,4 @@
+14a06fc38df66906110fd4ee1b65edb91a748ba5a12bea0aa3df5cbde90dc820  docs/mf4/control-writes.csv
+179351d2971dc7ade66a92430ce3254a4561d16d72c3c6ccb682a1d87719df81  crates/mf-core/tests/fixtures/windows-b2.hex
+1e858ccf9ba7809119f267362b16e2de960b570c00d084b5ff8202b60512f472  crates/mf-core/tests/fixtures/windows-state.json
+8b781f5547c997efbe33a3e95545e4d9f4dcbbb32196f419ab1e102f310a5329  docs/mf4/hardware-validation-2026-10-28.json

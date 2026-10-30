@@ -2,9 +2,9 @@
 
 ## Work sequence
 
-1. Depend on the reviewed extracted `mf-core`; compile a real public-API
+1. Maintain `mf-core` and the service as separate workspace crates; compile a public-API
    consumer. Select and pin a maintained Rust socket/runtime/serialization stack
-   whose compiler requirements are recorded. Do not copy private core modules.
+   whose compiler requirements are recorded. Keep clients outside the hardware implementation.
 2. Implement strict framing/DTOs and contract fixtures, then the coordinator
    against a deterministic fake backend used only in tests.
 3. Implement the bounded blocking worker, plans and durable operation identity.
@@ -13,11 +13,13 @@
 6. Validate on hardware with recorded baseline/restore and controlled audio.
 7. Ship reviewed package/user-unit files with documented optional enablement.
 
-The foreground implementation and locked `mf-core` dependency are present.
+The foreground service, shared core and driver are present in this repository.
 Coordinator, persistence and real Unix-socket tests use deterministic devices
 only in tests. Bounded MF4 hardware integration is recorded in [the validation report](MF4_VALIDATION.md).
-Two independent UI clients, clean-machine installation, other sample rates and
-controlled disconnect/recovery acceptance remain open.
+The complete installer has [operator-confirmed immediate and post-reboot operation](INSTALLATION_VALIDATION.md).
+The report does not identify the initial machine setup. Two independent UI
+clients, clean-machine installation, other sample rates and controlled
+disconnect/recovery acceptance remain open.
 
 ## Automated acceptance
 
