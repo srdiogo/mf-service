@@ -59,6 +59,7 @@ and the read-only `minifuse-doctor`.
 - [Architecture, bounds and lifecycle](docs/ARCHITECTURE.md)
 - [Implementation status and validation](docs/IMPLEMENTATION.md)
 - [Installation and troubleshooting](docs/INSTALL.md)
+- [Operator-confirmed installation and reboot validation](docs/INSTALLATION_VALIDATION.md)
 - [Hardware integration validation](docs/MF4_VALIDATION.md)
 - [Contribution workflow](CONTRIBUTING.md)
 - [Canonical service/client fixtures](tests/contract/README.md)

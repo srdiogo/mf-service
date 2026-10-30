@@ -16,8 +16,10 @@
 The foreground service, shared core and driver are present in this repository.
 Coordinator, persistence and real Unix-socket tests use deterministic devices
 only in tests. Bounded MF4 hardware integration is recorded in [the validation report](MF4_VALIDATION.md).
-Two independent UI clients, clean-machine installation, other sample rates and
-controlled disconnect/recovery acceptance remain open.
+The complete installer has [operator-confirmed immediate and post-reboot operation](INSTALLATION_VALIDATION.md).
+The report does not identify the initial machine setup. Two independent UI
+clients, clean-machine installation, other sample rates and controlled
+disconnect/recovery acceptance remain open.
 
 ## Automated acceptance
 
